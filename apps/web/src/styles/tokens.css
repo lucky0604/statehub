@@ -1,0 +1,100 @@
+/**
+ * StateHub design tokens.
+ * Source: agent_flow/statehub-design-system.md §6.2
+ *
+ * Light theme on :root, dark theme on .dark (shadcn/Tailwind default).
+ * Values match the design system doc literally. Do not invent new tokens here.
+ */
+
+:root {
+  /* Backgrounds */
+  --bg-canvas: #f8fafc;
+  --bg-surface-1: #ffffff;
+  --bg-surface-2: #f8fafc;
+  --bg-layer-1: #ffffff;
+  --bg-layer-2: #f1f5f9;
+  --bg-layer-3: #e2e8f0;
+
+  /* Borders */
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --border-focus: #2563eb;
+
+  /* Text */
+  --txt-primary: #0f172a;
+  --txt-secondary: #334155;
+  --txt-tertiary: #64748b;
+  --txt-placeholder: #94a3b8;
+  --txt-disabled: #cbd5e1;
+
+  /* Accents */
+  --accent-primary: #2563eb;
+  --accent-primary-hover: #1d4ed8;
+  --accent-ai: #6366f1;
+  --accent-success: #16a34a;
+  --accent-warning: #d97706;
+  --accent-danger: #dc2626;
+
+  /* Layout dimensions (design system §4.1) */
+  --topbar-height: 48px;
+  --sidebar-width: 248px;
+  --right-rail-width: 336px;
+  --toolbar-height: 44px;
+  --table-row-height: 36px;
+  --kanban-column-width: 296px;
+  --peek-width: 560px;
+  --modal-max-width: 640px;
+
+  /* z-index scale (design system §13.4) */
+  --z-peek: 30;
+  --z-sheet: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+
+  /* Radius (design system §6.3) */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Shadows (design system §6.5) */
+  --shadow-popover: 0 8px 24px rgb(15 23 42 / 0.12);
+  --shadow-drawer: -8px 0 24px rgb(15 23 42 / 0.10);
+  --shadow-modal: 0 20px 48px rgb(15 23 42 / 0.18);
+
+  /* Motion (design system §17) */
+  --motion-fast: 100ms;
+  --motion-normal: 180ms;
+  --motion-slow: 240ms;
+}
+
+.dark {
+  --bg-canvas: #020617;
+  --bg-surface-1: #0f172a;
+  --bg-surface-2: #111827;
+  --bg-layer-1: #1e293b;
+  --bg-layer-2: #334155;
+  --bg-layer-3: #475569;
+
+  --border-subtle: #1e293b;
+  --border-strong: #334155;
+  --border-focus: #60a5fa;
+
+  --txt-primary: #f8fafc;
+  --txt-secondary: #cbd5e1;
+  --txt-tertiary: #94a3b8;
+  --txt-placeholder: #64748b;
+  --txt-disabled: #475569;
+
+  --accent-primary: #60a5fa;
+  --accent-primary-hover: #93c5fd;
+  --accent-ai: #818cf8;
+  --accent-success: #22c55e;
+  --accent-warning: #f59e0b;
+  --accent-danger: #f87171;
+
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.4);
+  --shadow-drawer: -8px 0 24px rgb(0 0 0 / 0.4);
+  --shadow-modal: 0 20px 48px rgb(0 0 0 / 0.5);
+}

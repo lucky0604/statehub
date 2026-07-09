@@ -1,0 +1,42 @@
+{
+  "name": "statehub",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "dev": "pnpm --filter @statehub/web dev",
+    "build": "pnpm -r build",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "db:generate": "pnpm --filter @statehub/db db:generate",
+    "db:migrate": "pnpm --filter @statehub/db db:migrate",
+    "db:studio": "pnpm --filter @statehub/db db:studio",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@types/node": "^22.10.0",
+    "eslint": "^9.20.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0",
+    "@playwright/test": "^1.50.0",
+    "globals": "^16.0.0",
+    "typescript-eslint": "^8.24.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "unrs-resolver",
+      "workerd"
+    ]
+  }
+}

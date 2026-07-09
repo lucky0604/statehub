@@ -1,0 +1,12 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "statehub-db"
+compatibility_date = "2026-07-01"
+main = "src/worker.ts"
+
+# Local D1 database. Used for `pnpm db:migrate` and `pnpm db:query`.
+# `--local` commands do NOT require `wrangler login`.
+[[d1_databases]]
+binding = "statehub-local"
+database_name = "statehub-local"
+database_id = "local"
+migrations_dir = "migrations"

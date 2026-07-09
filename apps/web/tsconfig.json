@@ -1,0 +1,50 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./.next/types",
+    "noEmit": true,
+    "jsx": "preserve",
+    "allowJs": false,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*",
+        "./app/*"
+      ],
+      "@statehub/db": [
+        "../../packages/db/src/index.ts"
+      ],
+      "@statehub/db/*": [
+        "../../packages/db/src/*"
+      ],
+      "@statehub/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
+      "@statehub/shared/*": [
+        "../../packages/shared/src/*"
+      ],
+      "@statehub/config": [
+        "../../packages/config/src/index.ts"
+      ],
+      "@statehub/config/*": [
+        "../../packages/config/src/*"
+      ]
+    },
+    "incremental": true
+  },
+  "include": [
+    "app/**/*",
+    "next-env.d.ts",
+    "next.config.ts",
+    "src/**/*",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next"
+  ]
+}

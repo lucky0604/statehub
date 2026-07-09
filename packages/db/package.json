@@ -1,0 +1,32 @@
+{
+  "name": "@statehub/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./schema/base": "./src/schema/base.ts",
+    "./schema/events": "./src/schema/events.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "wrangler d1 migrations apply statehub-local --local",
+    "db:migrate:remote": "wrangler d1 migrations apply statehub-local --remote",
+    "db:studio": "drizzle-kit studio",
+    "db:query": "wrangler d1 execute statehub-local --local"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.38.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "drizzle-kit": "^0.30.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.27.0"
+  }
+}

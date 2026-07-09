@@ -1,0 +1,75 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/**
+ * Tailwind v4 CSS-first theme mapping.
+ * Maps semantic tokens to utility classes so components reference
+ * bg-canvas, border-subtle, txt-primary, etc. — never raw colors.
+ *
+ * Source: agent_flow/statehub-design-system.md §6
+ */
+@theme inline {
+  --color-canvas: var(--bg-canvas);
+  --color-surface-1: var(--bg-surface-1);
+  --color-surface-2: var(--bg-surface-2);
+  --color-layer-1: var(--bg-layer-1);
+  --color-layer-2: var(--bg-layer-2);
+  --color-layer-3: var(--bg-layer-3);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-border-focus: var(--border-focus);
+
+  --color-txt-primary: var(--txt-primary);
+  --color-txt-secondary: var(--txt-secondary);
+  --color-txt-tertiary: var(--txt-tertiary);
+  --color-txt-placeholder: var(--txt-placeholder);
+  --color-txt-disabled: var(--txt-disabled);
+
+  --color-accent: var(--accent-primary);
+  --color-accent-hover: var(--accent-primary-hover);
+  --color-accent-ai: var(--accent-ai);
+  --color-success: var(--accent-success);
+  --color-warning: var(--accent-warning);
+  --color-danger: var(--accent-danger);
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+}
+
+@layer base {
+  html,
+  body {
+    background: var(--bg-canvas);
+    color: var(--txt-primary);
+    font-family:
+      Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  *,
+  *::before,
+  *::after {
+    border-color: var(--border-subtle);
+  }
+}
+
+/* Focus ring (design system §18) */
+@utility focus-ring {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--bg-surface-1),
+    0 0 0 4px var(--border-focus);
+}
+
+/* Monospace for IDs, SHAs, file paths (design system §7) */
+@utility font-mono-app {
+  font-family:
+    "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+  font-feature-settings: "ss01", "cv01";
+}

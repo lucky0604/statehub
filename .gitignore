@@ -1,0 +1,42 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+build/
+dist/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# d1 / wrangler local
+.wrangler/
+.wrangler/
+*.sqlite
+*.sqlite-journal
+
+# typescript
+*.tsbuildinfo
+
+# testing
+coverage/
+playwright-report/
+test-results/
+
+# editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# misc
+*.log
+
+# local agent directories (review plans, skill overrides, local settings)
+agent_flow/
+.codex/
+.claude/
