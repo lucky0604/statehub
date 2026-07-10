@@ -9,7 +9,17 @@ export {
   type WorkspaceMember,
   type NewWorkspaceMember,
 } from "./workspace-members";
-export { projects, type Project, type NewProject } from "./projects";
+export {
+  projects,
+  PROJECT_TYPES,
+  PROJECT_STATUSES,
+  PORTFOLIO_PRIORITIES,
+  type ProjectType,
+  type ProjectStatus,
+  type PortfolioPriority,
+  type Project,
+  type NewProject,
+} from "./projects";
 export {
   states,
   STATUS_GROUPS,

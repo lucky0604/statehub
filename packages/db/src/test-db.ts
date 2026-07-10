@@ -25,6 +25,7 @@ export function createInMemoryDb(): DbClient {
     "0000_initial_events.sql",
     "0001_core_tables.sql",
     "0002_steady_marvex.sql",
+    "0003_daily_kang.sql",
   ]) {
     const sql = readFileSync(resolve(MIGRATIONS_DIR, file), "utf8");
     raw.exec(sql);

@@ -11,6 +11,12 @@ import {
   type DbClient,
   type ActorContext,
   type Project,
+  type ProjectType,
+  type ProjectStatus,
+  type PortfolioPriority,
+  PROJECT_TYPES,
+  PROJECT_STATUSES,
+  PORTFOLIO_PRIORITIES,
   type SqlBindValue,
   withEvent,
 } from "@statehub/db";
@@ -22,6 +28,9 @@ export interface CreateProjectInput {
   name: string;
   identifier: string;
   description?: string;
+  type?: ProjectType;
+  status?: ProjectStatus;
+  portfolioPriority?: PortfolioPriority;
 }
 
 export interface UpdateProjectInput {
@@ -29,6 +38,9 @@ export interface UpdateProjectInput {
   description?: string | null;
   defaultStateId?: string | null;
   defaultAssigneeId?: string | null;
+  type?: ProjectType | null;
+  status?: ProjectStatus;
+  portfolioPriority?: PortfolioPriority;
 }
 
 export interface ProjectService {
@@ -95,6 +107,42 @@ function validateInput(input: CreateProjectInput): void {
   if (!input.name?.trim()) {
     throw new ValidationError("name is required");
   }
+  if (input.type !== undefined && input.type !== null && !PROJECT_TYPES.includes(input.type)) {
+    throw new ValidationError(`type must be one of: ${PROJECT_TYPES.join(", ")}`);
+  }
+  if (input.status !== undefined && !PROJECT_STATUSES.includes(input.status)) {
+    throw new ValidationError(`status must be one of: ${PROJECT_STATUSES.join(", ")}`);
+  }
+  if (
+    input.portfolioPriority !== undefined &&
+    !PORTFOLIO_PRIORITIES.includes(input.portfolioPriority)
+  ) {
+    throw new ValidationError(
+      `portfolioPriority must be one of: ${PORTFOLIO_PRIORITIES.join(", ")}`,
+    );
+  }
+}
+
+/** Validate the enum fields that may appear in a PATCH (type may be nulled). */
+function validatePatchEnums(patch: UpdateProjectInput): void {
+  if (
+    patch.type !== undefined &&
+    patch.type !== null &&
+    !PROJECT_TYPES.includes(patch.type)
+  ) {
+    throw new ValidationError(`type must be one of: ${PROJECT_TYPES.join(", ")}`);
+  }
+  if (patch.status !== undefined && !PROJECT_STATUSES.includes(patch.status)) {
+    throw new ValidationError(`status must be one of: ${PROJECT_STATUSES.join(", ")}`);
+  }
+  if (
+    patch.portfolioPriority !== undefined &&
+    !PORTFOLIO_PRIORITIES.includes(patch.portfolioPriority)
+  ) {
+    throw new ValidationError(
+      `portfolioPriority must be one of: ${PORTFOLIO_PRIORITIES.join(", ")}`,
+    );
+  }
 }
 
 interface NewProjectRow {
@@ -106,6 +154,9 @@ interface NewProjectRow {
   identifier: string;
   defaultStateId: string | null;
   defaultAssigneeId: string | null;
+  type: string | null;
+  status: string;
+  portfolioPriority: string;
   version: number;
   createdBy: string | null;
   updatedBy: string | null;
@@ -116,8 +167,10 @@ function projectInsertStmt(p: NewProjectRow): { sql: string; params: SqlBindValu
     sql: `
       INSERT INTO projects (
         id, workspace_id, slug, name, description, identifier,
-        default_state_id, default_assignee_id, version, created_by, updated_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        default_state_id, default_assignee_id,
+        type, status, portfolio_priority,
+        version, created_by, updated_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     params: [
       p.id,
@@ -128,6 +181,9 @@ function projectInsertStmt(p: NewProjectRow): { sql: string; params: SqlBindValu
       p.identifier,
       p.defaultStateId ?? null,
       p.defaultAssigneeId ?? null,
+      p.type ?? null,
+      p.status,
+      p.portfolioPriority,
       p.version,
       p.createdBy ?? null,
       p.updatedBy ?? null,
@@ -230,6 +286,9 @@ export const projectService: ProjectService = {
       identifier: input.identifier,
       defaultStateId: stateIds[0] ?? null, // Backlog
       defaultAssigneeId: null,
+      type: input.type ?? null,
+      status: input.status ?? "active",
+      portfolioPriority: input.portfolioPriority ?? "P1",
       version: 1,
       createdBy: actor.id ?? null,
       updatedBy: actor.id ?? null,
@@ -322,6 +381,8 @@ export const projectService: ProjectService = {
     const existing = await projectService.get(db, workspaceId, projectId);
     if (!existing) throw new NotFoundError("project", projectId);
 
+    validatePatchEnums(patch);
+
     const sets: string[] = [];
     const params: SqlBindValue[] = [];
     if (patch.name !== undefined) {
@@ -340,6 +401,18 @@ export const projectService: ProjectService = {
     if (patch.defaultAssigneeId !== undefined) {
       sets.push("default_assignee_id = ?");
       params.push(patch.defaultAssigneeId);
+    }
+    if (patch.type !== undefined) {
+      sets.push("type = ?");
+      params.push(patch.type);
+    }
+    if (patch.status !== undefined) {
+      sets.push("status = ?");
+      params.push(patch.status);
+    }
+    if (patch.portfolioPriority !== undefined) {
+      sets.push("portfolio_priority = ?");
+      params.push(patch.portfolioPriority);
     }
     if (sets.length === 0) return existing;
 

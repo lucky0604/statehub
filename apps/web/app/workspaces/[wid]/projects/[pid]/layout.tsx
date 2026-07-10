@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 
-import { requireWorkspace, getProject, listStates } from "@/lib/queries";
+import { requireWorkspace, getProject, listStates, getProjectHealth } from "@/lib/queries";
+import { ProjectHealthCard } from "@/components/portfolio/project-health-card";
 
 /**
  * Project layout — loads the project + its states once, renders the project
- * header, and passes children through for the tab content.
+ * header + a deterministic Project Health summary, and passes children through
+ * for the tab content (work items surface).
  */
 export default async function ProjectLayout({
   children,
@@ -20,7 +22,10 @@ export default async function ProjectLayout({
   const project = await getProject(wid, pid);
   if (!project) notFound();
 
-  const states = await listStates(wid, pid);
+  const [states, health] = await Promise.all([
+    listStates(wid, pid),
+    getProjectHealth(wid, pid),
+  ]);
 
   return (
     <div className="flex h-full flex-col">
@@ -56,6 +61,9 @@ export default async function ProjectLayout({
           ))}
         </div>
       </header>
+      <div className="shrink-0 overflow-y-auto border-b border-border-subtle bg-canvas px-5 py-3">
+        <ProjectHealthCard workspaceId={wid} projectId={pid} health={health} />
+      </div>
       <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
     </div>
   );

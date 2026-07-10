@@ -7,6 +7,9 @@ export {
   type EventType,
   type Workspace,
   type Project,
+  type ProjectType,
+  type ProjectStatus,
+  type PortfolioPriority,
   type State,
   type StatusGroup,
   type Label,
@@ -78,6 +81,14 @@ export {
   cycleService,
   type CycleService,
   type CreateCycleInput,
+  projectHealthService,
+  type ProjectHealthService,
+  type ProjectHealthSummary,
+  type PortfolioHealth,
+  type HealthFocus,
+  type HealthNextAction,
+  type AtRiskProject,
+  PORTFOLIO_PRIORITY_RANK,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)

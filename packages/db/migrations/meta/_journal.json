@@ -22,6 +22,13 @@
       "when": 1783661672236,
       "tag": "0002_steady_marvex",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1783667688842,
+      "tag": "0003_daily_kang",
+      "breakpoints": true
     }
   ]
 }

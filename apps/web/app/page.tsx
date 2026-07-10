@@ -1,12 +1,15 @@
-import Link from "next/link";
-
-import { requireWorkspace, listProjects } from "@/lib/queries";
+import { requireWorkspace, listProjects, getPortfolioHealth } from "@/lib/queries";
+import { PORTFOLIO_PRIORITY_RANK } from "@statehub/domain";
+import type { PortfolioHealth, Project } from "@statehub/domain";
+import { PortfolioTable } from "@/components/portfolio/portfolio-table";
 
 /**
- * Portfolio dashboard — the home page.
+ * Portfolio dashboard — the home page (§21.1).
  *
- * Shows the current workspace's projects. For solo dev there's one workspace;
- * the project list is the landing surface.
+ * Answers "what should I work on this week?" with a project priority table plus
+ * a deterministic health rollup. Every health signal carries a reason.
+ *
+ * UI copy is "Project Health" — never "AI PM" (reserved for P05).
  */
 export default async function HomePage() {
   let ws;
@@ -16,16 +19,39 @@ export default async function HomePage() {
     return <EmptyWorkspace />;
   }
 
-  const projects = await listProjects(ws.id);
+  const [projects, health] = await Promise.all([
+    listProjects(ws.id),
+    getPortfolioHealth(ws.id),
+  ]);
+
+  // Index health + features by project id for the table.
+  const healthById = new Map(health.byProject.map((h) => [h.projectId, h]));
+
+  // Sort by portfolio priority (P0 first), then name.
+  const sorted = [...projects].sort((a, b) => {
+    const pr =
+      (PORTFOLIO_PRIORITY_RANK[a.portfolioPriority] ?? 9) -
+      (PORTFOLIO_PRIORITY_RANK[b.portfolioPriority] ?? 9);
+    if (pr !== 0) return pr;
+    return a.name.localeCompare(b.name);
+  });
+
+  const rows: PortfolioRow[] = sorted.map((p) => {
+    const h = healthById.get(p.id);
+    return {
+      project: p,
+      health: h ?? null,
+    };
+  });
 
   return (
-    <div className="mx-auto max-w-5xl py-6">
-      <header className="mb-6">
-        <h1 className="text-[18px] font-semibold text-txt-primary">
-          {ws.name}
-        </h1>
+    <div className="mx-auto max-w-6xl py-6">
+      <header className="mb-5">
+        <h1 className="text-[18px] font-semibold text-txt-primary">{ws.name}</h1>
         <p className="mt-0.5 text-[13px] text-txt-secondary">
-          {projects.length} project{projects.length === 1 ? "" : "s"}
+          {projects.length} project{projects.length === 1 ? "" : "s"} ·{" "}
+          <span className="text-danger">{health.atRisk.length} at risk</span> ·{" "}
+          <span className="text-txt-tertiary">{health.openHigh} open high</span>
         </p>
       </header>
 
@@ -38,35 +64,15 @@ export default async function HomePage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => (
-            <Link
-              key={p.id}
-              href={`/workspaces/${ws.id}/projects/${p.id}`}
-              className="block rounded-md border border-border-subtle bg-surface-1 p-4 transition-colors hover:border-border-strong hover:bg-surface-2"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-mono-app text-[11px] text-accent">
-                  {p.identifier}
-                </span>
-                <span className="text-[11px] text-txt-tertiary">
-                  {p.slug}
-                </span>
-              </div>
-              <h3 className="mt-1.5 text-[14px] font-semibold text-txt-primary">
-                {p.name}
-              </h3>
-              {p.description ? (
-                <p className="mt-1 line-clamp-2 text-[12px] text-txt-tertiary">
-                  {p.description}
-                </p>
-              ) : null}
-            </Link>
-          ))}
-        </div>
+        <PortfolioTable workspaceId={ws.id} rows={rows} atRisk={health.atRisk} />
       )}
     </div>
   );
+}
+
+export interface PortfolioRow {
+  project: Project;
+  health: PortfolioHealth["byProject"][number] | null;
 }
 
 function EmptyWorkspace() {

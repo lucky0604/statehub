@@ -32,3 +32,14 @@ export {
   type CycleService,
   type CreateCycleInput,
 } from "./cycle";
+export {
+  projectHealthService,
+  type ProjectHealthService,
+  type ProjectHealthSummary,
+  type PortfolioHealth,
+  type HealthFocus,
+  type HealthNextAction,
+  type AtRiskProject,
+  type SummarizeOptions,
+  PORTFOLIO_PRIORITY_RANK,
+} from "./project-health";

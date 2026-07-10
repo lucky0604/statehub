@@ -1,4 +1,9 @@
-import { projectService } from "@statehub/domain";
+import {
+  projectService,
+  type ProjectType,
+  type ProjectStatus,
+  type PortfolioPriority,
+} from "@statehub/domain";
 import { withEnvelope, parseBody, param, or404 } from "@/lib/api-handler";
 import { db, getActor } from "@/lib/server";
 
@@ -18,6 +23,9 @@ export const PATCH = withEnvelope(async (req, params) => {
     description?: string | null;
     defaultStateId?: string | null;
     defaultAssigneeId?: string | null;
+    type?: ProjectType | null;
+    status?: ProjectStatus;
+    portfolioPriority?: PortfolioPriority;
   }>(req);
   return projectService.update(db(), getActor(), wid, pid, body);
 });

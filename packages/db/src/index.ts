@@ -18,6 +18,14 @@ export {
 } from "./schema/index";
 export { projects, type Project, type NewProject } from "./schema/index";
 export {
+  PROJECT_TYPES,
+  PROJECT_STATUSES,
+  PORTFOLIO_PRIORITIES,
+  type ProjectType,
+  type ProjectStatus,
+  type PortfolioPriority,
+} from "./schema/index";
+export {
   states,
   STATUS_GROUPS,
   type StatusGroup,

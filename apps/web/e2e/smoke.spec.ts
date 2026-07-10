@@ -28,8 +28,9 @@ test("project detail lists seeded work items", async ({ page }) => {
   await openSeededProject(page);
   // The project identifier shows in the header.
   await expect(page.getByText("STH", { exact: true })).toBeVisible();
-  // A seeded work item title renders in the list table.
-  await expect(page.getByText("Wire API routes with envelope")).toBeVisible();
+  // A seeded work item title renders in the list table (scope to tbody to
+  // avoid matching the Project Health card in the header).
+  await expect(page.locator("tbody").getByText("Wire API routes with envelope")).toBeVisible();
 });
 
 test("list ↔ kanban switch is URL-backed", async ({ page }) => {
@@ -51,8 +52,9 @@ test("list ↔ kanban switch is URL-backed", async ({ page }) => {
 
 test("opening a work item opens the peek drawer", async ({ page }) => {
   await openSeededProject(page);
-  // Click the work item row (the title text is in a table cell).
-  await page.getByText("Wire API routes with envelope").click();
+  // Click the work item row (scope to tbody — the Project Health card also
+  // shows the title in its "Current focus" section).
+  await page.locator("tbody").getByText("Wire API routes with envelope").click();
   // Peek URL state is set.
   await expect(page).toHaveURL(/peek=/);
   // The peek dialog is visible with the title as a heading.
@@ -71,13 +73,13 @@ test("dragging a card in kanban changes state", async ({ page }) => {
   await page.getByRole("button", { name: "Kanban layout" }).click();
 
   // "Kanban board view" is seeded in Backlog. Drag it to the Done column.
-  const card = page.getByText("Kanban board view", { exact: true });
+  // Scope to the kanban surface (the Project Health card may also list the title).
+  const card = page.locator('[draggable="true"]').filter({ hasText: "Kanban board view" });
   const doneHeader = page.locator("text=Done").first();
   await card.dragTo(doneHeader);
 
-  // After the optimistic move + refresh, the card should be under Done.
-  // (Allow a moment for the router refresh to settle.)
-  await expect(page.getByText("Kanban board view", { exact: true })).toBeVisible();
+  // After the optimistic move + refresh, the card should still be visible.
+  await expect(card).toBeVisible();
 });
 
 test("saving and applying a view restores filters", async ({ page }) => {
@@ -130,4 +132,31 @@ test("sidebar portfolio link is active on home", async ({ page }) => {
   await page.goto("/");
   const portfolioLink = page.getByRole("link", { name: "Portfolio" });
   await expect(portfolioLink).toHaveAttribute("aria-current", "page");
+});
+
+test("portfolio shows the project health table with columns", async ({ page }) => {
+  await page.goto("/");
+  // The seeded project appears as a row with its identifier.
+  await expect(page.getByText("STH", { exact: true })).toBeVisible();
+  // "Open" column header is present.
+  await expect(page.getByText("Open", { exact: true }).first()).toBeVisible();
+  // "Next Action" column header.
+  await expect(page.getByText("Next Action", { exact: true }).first()).toBeVisible();
+});
+
+test("project detail shows a Project Health summary", async ({ page }) => {
+  await openSeededProject(page);
+  // The Project Health card is present (distinct from the rail via testid).
+  await expect(page.getByTestId("project-health")).toBeVisible();
+  // The "Suggested next step" deterministic section.
+  await expect(page.getByText("Suggested next step", { exact: true })).toBeVisible();
+  // Open count signal.
+  await expect(page.getByText("Open", { exact: true }).first()).toBeVisible();
+});
+
+test("right rail shows portfolio health rollup", async ({ page }) => {
+  await page.goto("/");
+  // The rail's Project Health section (distinct from any table header).
+  await expect(page.getByTestId("right-rail")).toBeVisible();
+  await expect(page.getByText("At risk", { exact: true })).toBeVisible();
 });

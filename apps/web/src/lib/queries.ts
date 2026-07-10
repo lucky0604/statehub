@@ -17,7 +17,11 @@ import {
   labelService,
   featureService,
   viewService,
+  projectHealthService,
   type ListWorkItemsFilter,
+  type PortfolioHealth,
+  type ProjectHealthSummary,
+  PORTFOLIO_PRIORITY_RANK,
 } from "@statehub/domain";
 import { db } from "./server";
 
@@ -82,3 +86,18 @@ export async function listWorkItemLabelIds(workspaceId: string, workItemId: stri
 export async function listWorkItemEvents(workspaceId: string, workItemId: string) {
   return workItemService.listEvents(db(), workspaceId, "work_item", workItemId);
 }
+
+/** Portfolio-level deterministic health (per-project summaries + at-risk + open high). */
+export async function getPortfolioHealth(workspaceId: string): Promise<PortfolioHealth> {
+  return projectHealthService.portfolio(db(), workspaceId);
+}
+
+/** Single-project deterministic health summary. */
+export async function getProjectHealth(
+  workspaceId: string,
+  projectId: string,
+): Promise<ProjectHealthSummary> {
+  return projectHealthService.summarize(db(), workspaceId, projectId);
+}
+
+export { PORTFOLIO_PRIORITY_RANK };
