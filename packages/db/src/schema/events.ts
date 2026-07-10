@@ -60,16 +60,41 @@ export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
 
 /**
- * Canonical event types. Source: PRD §10.21.
- * Adding a new type requires updating this const + the PRD.
+ * Canonical event types. Source: PRD §10.21 (examples — list is not closed).
+ *
+ * P01A extends the PRD examples with update/delete events for every managed
+ * entity, plus workspace.* events. The PRD's list was illustrative; every
+ * state mutation appends an event per data-contracts §8, so the type list
+ * needs to cover every mutation kind we emit.
  */
 export const EVENT_TYPES = [
+  // workspace
+  "workspace.created",
+  "workspace.updated",
+  "workspace.deleted",
+  // project
   "project.created",
+  "project.updated",
+  "project.deleted",
+  // state
   "state.created",
+  "state.updated",
+  "state.deleted",
+  // label
   "label.created",
+  "label.updated",
+  "label.deleted",
+  // feature
   "feature.created",
+  "feature.updated",
+  "feature.status_changed",
+  "feature.deleted",
+  // work item
   "work_item.created",
+  "work_item.updated",
   "work_item.status_changed",
+  "work_item.deleted",
+  // PRD §10.21 examples not yet emitted (reserved for later phases)
   "todo.upserted",
   "todo.status_changed",
   "agent_run.started",
@@ -77,7 +102,6 @@ export const EVENT_TYPES = [
   "review.submitted",
   "finding.created",
   "decision.recorded",
-  "feature.status_changed",
   "view.created",
   "cycle.created",
 ] as const;

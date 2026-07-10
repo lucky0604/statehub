@@ -32,6 +32,12 @@
       ],
       "@statehub/config/*": [
         "../../packages/config/src/*"
+      ],
+      "@statehub/domain": [
+        "../../packages/domain/src/index.ts"
+      ],
+      "@statehub/domain/*": [
+        "../../packages/domain/src/*"
       ]
     },
     "incremental": true

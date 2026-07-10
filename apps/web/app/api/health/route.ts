@@ -1,7 +1,7 @@
 import { ok } from "@statehub/shared";
 import { hasD1 } from "@statehub/db";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 /**
  * GET /api/health

@@ -13,6 +13,7 @@
     "e2e": "playwright test",
     "db:generate": "pnpm --filter @statehub/db db:generate",
     "db:migrate": "pnpm --filter @statehub/db db:migrate",
+    "db:seed": "tsx apps/web/scripts/seed.ts",
     "db:studio": "pnpm --filter @statehub/db db:studio",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -36,7 +37,8 @@
       "esbuild",
       "sharp",
       "unrs-resolver",
-      "workerd"
+      "workerd",
+      "better-sqlite3"
     ]
   }
 }

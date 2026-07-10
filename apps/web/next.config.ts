@@ -6,7 +6,11 @@ import type { NextConfig } from "next";
  */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@statehub/db", "@statehub/shared", "@statehub/config"],
+  transpilePackages: ["@statehub/db", "@statehub/shared", "@statehub/config", "@statehub/domain"],
+  // better-sqlite3 is a native binding — keep it out of the webpack bundle so
+  // Node.js loads it via require() at runtime. We load it via
+  // __non_webpack_require__ in packages/db/src/local-client.ts.
+  serverExternalPackages: ["better-sqlite3"],
   experimental: {
     // Allow importing workspace packages that ship .ts source.
     externalDir: true,

@@ -15,9 +15,15 @@ dist/
 
 # d1 / wrangler local
 .wrangler/
-.wrangler/
 *.sqlite
 *.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# local dev database (better-sqlite3 file + WAL/SHM sidecars — recreated by db:migrate)
+packages/db/local.db
+packages/db/local.db-wal
+packages/db/local.db-shm
 
 # typescript
 *.tsbuildinfo

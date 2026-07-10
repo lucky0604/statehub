@@ -1,3 +1,7 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Bot,
   FolderKanban,
@@ -15,21 +19,22 @@ import { cn } from "../lib/cn";
  * Sidebar — 248px primary navigation.
  * Source: design system §9.1
  *
- * P00: all 8 nav items are placeholders. No real routes yet.
- * Real routes land P01A onwards.
+ * P01A: Portfolio links to the real home page. The rest remain placeholders —
+ * their routes land in later phases (P01B/P01C/P02+).
  */
 const NAV_ITEMS = [
-  { label: "Portfolio", icon: LayoutDashboard },
-  { label: "Projects", icon: FolderKanban },
-  { label: "Saved Views", icon: ListFilter },
-  { label: "Current Focus", icon: Target },
-  { label: "Reviews", icon: ScanSearch },
-  { label: "Agent Runs", icon: Bot },
-  { label: "Decisions", icon: GitBranch },
-  { label: "Settings", icon: Settings },
+  { label: "Portfolio", icon: LayoutDashboard, href: "/" },
+  { label: "Projects", icon: FolderKanban, href: "/" },
+  { label: "Saved Views", icon: ListFilter, href: "/" },
+  { label: "Current Focus", icon: Target, href: "/" },
+  { label: "Reviews", icon: ScanSearch, href: "/" },
+  { label: "Agent Runs", icon: Bot, href: "/" },
+  { label: "Decisions", icon: GitBranch, href: "/" },
+  { label: "Settings", icon: Settings, href: "/" },
 ] as const;
 
 export function Sidebar({ className }: { className?: string }) {
+  const pathname = usePathname();
   return (
     <nav
       className={cn(
@@ -43,22 +48,31 @@ export function Sidebar({ className }: { className?: string }) {
         Navigation
       </div>
       <ul className="flex flex-col gap-0.5 px-2">
-        {NAV_ITEMS.map(({ label, icon: Icon }) => (
-          <li key={label}>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] text-txt-secondary hover:bg-layer-2 hover:text-txt-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-              aria-label={label}
-            >
-              <Icon className="h-4 w-4 shrink-0" aria-hidden />
-              <span className="truncate">{label}</span>
-            </button>
-          </li>
-        ))}
+        {NAV_ITEMS.map(({ label, icon: Icon, href }) => {
+          const active = href === "/" && pathname === "/" && label === "Portfolio";
+          return (
+            <li key={label}>
+              <Link
+                href={href}
+                aria-label={label}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus",
+                  active
+                    ? "bg-layer-2 text-txt-primary"
+                    : "text-txt-secondary hover:bg-layer-2 hover:text-txt-primary",
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="truncate">{label}</span>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
 
       <div className="mt-auto px-3 pt-4 text-[11px] text-txt-tertiary">
-        No project selected
+        Solo workspace
       </div>
     </nav>
   );
