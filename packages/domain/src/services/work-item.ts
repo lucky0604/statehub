@@ -61,16 +61,38 @@ export interface UpdateWorkItemInput {
 }
 
 export interface ListWorkItemsFilter {
+  /** Single state (legacy single-value filter). */
   stateId?: string;
+  /** Repeatable: any of these state ids. */
+  stateIds?: string[];
   statusGroup?: StatusGroup;
+  /** Repeatable: any of these status groups. */
+  statusGroups?: StatusGroup[];
   featureId?: string | null;
   priority?: Priority;
+  /** Repeatable: any of these priorities. */
+  priorities?: Priority[];
   type?: WorkItemType;
+  /** Repeatable: work items tagged with ANY of these label ids. */
+  labelIds?: string[];
+  /** Repeatable: any of these sources. */
+  sources?: WorkItemSource[];
+  /** Repeatable: any of these confidence levels. */
+  confidences?: ConfidenceLevel[];
   /** Filter to work items whose title/description match (LIKE). */
   search?: string;
   /** Default: 100. Max: 500. */
   limit?: number;
+  /** Order: 'sequence' | 'updated' | 'priority'. Default 'sequence'. */
+  orderBy?: "sequence" | "updated" | "priority";
 }
+
+/** Sortable work-item fields → SQL ORDER BY fragment. */
+const ORDER_BY_SQL: Record<NonNullable<ListWorkItemsFilter["orderBy"]>, string> = {
+  sequence: "sequence_id DESC",
+  updated: "updated_at DESC",
+  priority: "CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END, sequence_id DESC",
+};
 
 export interface WorkItemService {
   create(
@@ -97,6 +119,42 @@ export interface WorkItemService {
     stateId: string,
   ): Promise<WorkItem>;
   softDelete(db: DbClient, actor: ActorContext, workspaceId: string, workItemId: string): Promise<void>;
+  /** Replace a work item's label set. Assigns the union; removes any not listed. */
+  setLabels(
+    db: DbClient,
+    actor: ActorContext,
+    workspaceId: string,
+    workItemId: string,
+    labelIds: string[],
+  ): Promise<string[]>;
+  /** Return the label ids currently assigned to a work item. */
+  listLabelIds(db: DbClient, workspaceId: string, workItemId: string): Promise<string[]>;
+  /** Change state on many work items. One event per item (each atomic). */
+  bulkChangeStatus(
+    db: DbClient,
+    actor: ActorContext,
+    workspaceId: string,
+    workItemIds: string[],
+    stateId: string,
+  ): Promise<{ updated: string[]; skipped: string[] }>;
+  /** Recent events for an entity (feeds Peek activity). */
+  listEvents(
+    db: DbClient,
+    workspaceId: string,
+    entityType: string,
+    entityId: string,
+    limit?: number,
+  ): Promise<EventRow[]>;
+}
+
+export interface EventRow {
+  id: string;
+  eventType: string;
+  actorType: string;
+  actorName: string;
+  source: string;
+  payloadJson: string;
+  createdAt: number;
 }
 
 interface ProjectRow {
@@ -248,14 +306,30 @@ export const workItemService: WorkItemService = {
     ];
     const params: SqlBindValue[] = [workspaceId, projectId];
 
-    if (filter.stateId) {
+    // state: combine single stateId + repeatable stateIds (deduped)
+    const stateIds = new Set<string>();
+    if (filter.stateId) stateIds.add(filter.stateId);
+    if (filter.stateIds) for (const s of filter.stateIds) stateIds.add(s);
+    if (stateIds.size === 1) {
       where.push("state_id = ?");
-      params.push(filter.stateId);
+      params.push([...stateIds][0]!);
+    } else if (stateIds.size > 1) {
+      where.push(`state_id IN (${Array.from(stateIds).map(() => "?").join(",")})`);
+      for (const s of stateIds) params.push(s);
     }
-    if (filter.statusGroup) {
+
+    // status_group: combine single + repeatable
+    const statusGroups = new Set<StatusGroup>();
+    if (filter.statusGroup) statusGroups.add(filter.statusGroup);
+    if (filter.statusGroups) for (const g of filter.statusGroups) statusGroups.add(g);
+    if (statusGroups.size === 1) {
       where.push("status_group = ?");
-      params.push(filter.statusGroup);
+      params.push([...statusGroups][0]!);
+    } else if (statusGroups.size > 1) {
+      where.push(`status_group IN (${Array.from(statusGroups).map(() => "?").join(",")})`);
+      for (const g of statusGroups) params.push(g);
     }
+
     if (filter.featureId !== undefined) {
       if (filter.featureId === null) {
         where.push("feature_id IS NULL");
@@ -264,14 +338,42 @@ export const workItemService: WorkItemService = {
         params.push(filter.featureId);
       }
     }
-    if (filter.priority) {
+
+    // priority: combine single + repeatable
+    const priorities = new Set<Priority>();
+    if (filter.priority) priorities.add(filter.priority);
+    if (filter.priorities) for (const p of filter.priorities) priorities.add(p);
+    if (priorities.size === 1) {
       where.push("priority = ?");
-      params.push(filter.priority);
+      params.push([...priorities][0]!);
+    } else if (priorities.size > 1) {
+      where.push(`priority IN (${Array.from(priorities).map(() => "?").join(",")})`);
+      for (const p of priorities) params.push(p);
     }
+
     if (filter.type) {
       where.push("type = ?");
       params.push(filter.type);
     }
+
+    if (filter.sources && filter.sources.length > 0) {
+      where.push(`source IN (${filter.sources.map(() => "?").join(",")})`);
+      for (const s of filter.sources) params.push(s);
+    }
+
+    if (filter.confidences && filter.confidences.length > 0) {
+      where.push(`confidence IN (${filter.confidences.map(() => "?").join(",")})`);
+      for (const c of filter.confidences) params.push(c);
+    }
+
+    // labels: work items tagged with ANY of the given label ids (join)
+    if (filter.labelIds && filter.labelIds.length > 0) {
+      where.push(
+        `id IN (SELECT work_item_id FROM work_item_labels WHERE label_id IN (${filter.labelIds.map(() => "?").join(",")}))`,
+      );
+      for (const l of filter.labelIds) params.push(l);
+    }
+
     if (filter.search) {
       where.push("(title LIKE ? OR description_markdown LIKE ?)");
       const like = `%${filter.search}%`;
@@ -279,11 +381,12 @@ export const workItemService: WorkItemService = {
     }
 
     const limit = Math.min(filter.limit ?? 100, 500);
+    const orderBy = ORDER_BY_SQL[filter.orderBy ?? "sequence"];
 
     const sql = `
       SELECT * FROM work_items
       WHERE ${where.join(" AND ")}
-      ORDER BY sort_order ASC, sequence_id DESC
+      ORDER BY ${orderBy}, sort_order ASC
       LIMIT ?
     `;
     params.push(limit);
@@ -438,5 +541,148 @@ export const workItemService: WorkItemService = {
       },
       () => [{ sql, params: [actor.id ?? null, workItemId, workspaceId] }],
     );
+  },
+
+  async setLabels(db, actor, workspaceId, workItemId, labelIds) {
+    const existing = await workItemService.get(db, workspaceId, workItemId);
+    if (!existing) throw new NotFoundError("work_item", workItemId);
+
+    // Fetch current assigned labels.
+    const currentRows = await db.all<{ label_id: string }>(
+      "SELECT label_id FROM work_item_labels WHERE work_item_id = ?",
+      [workItemId],
+    );
+    const current = new Set(currentRows.map((r) => r.label_id));
+    const next = new Set(labelIds);
+
+    const toAdd = [...next].filter((l) => !current.has(l));
+    const toRemove = [...current].filter((l) => !next.has(l));
+
+    // Verify added labels belong to the same workspace+project.
+    if (toAdd.length > 0) {
+      const validRows = await db.all<{ id: string }>(
+        `SELECT id FROM labels WHERE id IN (${toAdd.map(() => "?").join(",")}) AND workspace_id = ? AND project_id = ? AND deleted_at IS NULL`,
+        [...toAdd, workspaceId, existing.projectId],
+      );
+      const valid = new Set(validRows.map((r) => r.id));
+      for (const l of toAdd) {
+        if (!valid.has(l)) throw new NotFoundError("label", l);
+      }
+    }
+
+    const stmts: { sql: string; params: SqlBindValue[] }[] = [];
+    for (const labelId of toAdd) {
+      // INSERT OR IGNORE: if the assignment already exists (race / stale UI),
+      // skip it instead of throwing a PK-violation 500. setLabels is idempotent.
+      stmts.push({
+        sql: "INSERT OR IGNORE INTO work_item_labels (workspace_id, work_item_id, label_id) VALUES (?, ?, ?)",
+        params: [workspaceId, workItemId, labelId],
+      });
+    }
+    for (const labelId of toRemove) {
+      stmts.push({
+        sql: "DELETE FROM work_item_labels WHERE work_item_id = ? AND label_id = ?",
+        params: [workItemId, labelId],
+      });
+    }
+
+    if (stmts.length === 0) return [...next];
+
+    // Append a single work_item.labels_changed event in the same batch.
+    await withEvent(
+      db,
+      {
+        workspaceId,
+        projectId: existing.projectId,
+        workItemId,
+        entityType: "work_item",
+        entityId: workItemId,
+        eventType: "work_item.updated",
+        actor,
+        source: actor.type === "user" ? "user" : actor.type,
+        payload: { before: { labelIds: [...current] }, after: { labelIds: [...next] } },
+      },
+      () => stmts,
+    );
+
+    return [...next];
+  },
+
+  async listLabelIds(db, workspaceId, workItemId) {
+    // Verify the work item exists in this workspace (isolation).
+    const wi = await workItemService.get(db, workspaceId, workItemId);
+    if (!wi) return [];
+    const rows = await db.all<{ label_id: string }>(
+      "SELECT label_id FROM work_item_labels WHERE work_item_id = ?",
+      [workItemId],
+    );
+    return rows.map((r) => r.label_id);
+  },
+
+  async bulkChangeStatus(db, actor, workspaceId, workItemIds, stateId) {
+    // Pre-validate the target state exists in this workspace. If it doesn't,
+    // every item would fail the state lookup inside changeStatus — better to
+    // surface that as a single NotFoundError than a silent all-skipped result
+    // (P01B review: M2).
+    //
+    // We look it up against the first item's project; if there are no items we
+    // can't know the project, so verify it exists in-workspace at all.
+    const firstItem =
+      workItemIds.length > 0 ? await workItemService.get(db, workspaceId, workItemIds[0]!) : null;
+    if (firstItem) {
+      // Throws NotFoundError if the state is missing or belongs to another project.
+      await lookupState(db, workspaceId, firstItem.projectId, stateId);
+    } else {
+      // No valid first item: still confirm the state exists somewhere in workspace.
+      const stateRow = await db.first<{ id: string }>(
+        "SELECT id FROM states WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL",
+        [stateId, workspaceId],
+      );
+      if (!stateRow) throw new NotFoundError("state", stateId);
+    }
+
+    const updated: string[] = [];
+    const skipped: string[] = [];
+    for (const id of workItemIds) {
+      try {
+        const item = await workItemService.get(db, workspaceId, id);
+        if (!item) {
+          skipped.push(id);
+          continue;
+        }
+        // Skip no-ops: an item already in the target state is not "updated"
+        // (no mutation, no event). (P01B review: M3.)
+        if (item.stateId === stateId) {
+          skipped.push(id);
+          continue;
+        }
+        await workItemService.changeStatus(db, actor, workspaceId, id, stateId);
+        updated.push(id);
+      } catch {
+        skipped.push(id);
+      }
+    }
+    return { updated, skipped };
+  },
+
+  async listEvents(db, workspaceId, entityType, entityId, limit = 50) {
+    const cap = Math.min(limit, 200);
+    const rows = await db.all<Record<string, unknown>>(
+      `SELECT id, event_type, actor_type, actor_name, source, payload_json, created_at
+       FROM events
+       WHERE workspace_id = ? AND entity_type = ? AND entity_id = ?
+       ORDER BY created_at DESC
+       LIMIT ?`,
+      [workspaceId, entityType, entityId, cap],
+    );
+    return rows.map((r) => ({
+      id: r.id as string,
+      eventType: r.event_type as string,
+      actorType: r.actor_type as string,
+      actorName: r.actor_name as string,
+      source: r.source as string,
+      payloadJson: r.payload_json as string,
+      createdAt: r.created_at as number,
+    }));
   },
 };

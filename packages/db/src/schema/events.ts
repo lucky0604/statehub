@@ -94,6 +94,14 @@ export const EVENT_TYPES = [
   "work_item.updated",
   "work_item.status_changed",
   "work_item.deleted",
+  // view
+  "view.created",
+  "view.updated",
+  "view.deleted",
+  // cycle
+  "cycle.created",
+  "cycle.updated",
+  "cycle.deleted",
   // PRD §10.21 examples not yet emitted (reserved for later phases)
   "todo.upserted",
   "todo.status_changed",
@@ -102,8 +110,6 @@ export const EVENT_TYPES = [
   "review.submitted",
   "finding.created",
   "decision.recorded",
-  "view.created",
-  "cycle.created",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

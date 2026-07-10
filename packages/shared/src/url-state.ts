@@ -18,6 +18,7 @@ export const URL_STATE_KEYS = [
   "cycle", // cycle id filter
   "source", // source filter (repeatable)
   "confidence", // confidence filter (repeatable)
+  "search", // text search
   "group", // group-by field
   "sort", // sort field + direction
   "peek", // open work item id

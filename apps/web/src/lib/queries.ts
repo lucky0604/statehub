@@ -16,6 +16,8 @@ import {
   stateService,
   labelService,
   featureService,
+  viewService,
+  type ListWorkItemsFilter,
 } from "@statehub/domain";
 import { db } from "./server";
 
@@ -60,11 +62,23 @@ export async function listFeatures(workspaceId: string, projectId: string) {
 export async function listWorkItems(
   workspaceId: string,
   projectId: string,
-  filter?: Parameters<typeof workItemService.list>[3],
+  filter?: ListWorkItemsFilter,
 ) {
   return workItemService.list(db(), workspaceId, projectId, filter);
 }
 
 export async function getWorkItem(workspaceId: string, workItemId: string) {
   return workItemService.get(db(), workspaceId, workItemId);
+}
+
+export async function listViews(workspaceId: string, projectId: string) {
+  return viewService.list(db(), workspaceId, projectId);
+}
+
+export async function listWorkItemLabelIds(workspaceId: string, workItemId: string) {
+  return workItemService.listLabelIds(db(), workspaceId, workItemId);
+}
+
+export async function listWorkItemEvents(workspaceId: string, workItemId: string) {
+  return workItemService.listEvents(db(), workspaceId, "work_item", workItemId);
 }

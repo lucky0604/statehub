@@ -1,19 +1,28 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
   requireWorkspace,
   getProject,
   listStates,
+  listLabels,
+  listFeatures,
   listWorkItems,
+  listViews,
+  listWorkItemLabelIds,
 } from "@/lib/queries";
-import { StatusBadge } from "@/components/status-badge";
+import { buildFilterFromUrl } from "@/lib/work-items-url";
+import { WorkItemsSurface } from "@/components/work-items/work-items-surface";
 
 /**
- * Work items list — the project's primary surface.
+ * Work Items surface — the project's primary view.
  *
- * URL-backed filters: ?status_group=&state_id=&priority=&type=&search=
- * (URL state wiring is P01A-QA; this page renders the filterable list.)
+ * One data path: buildFilterFromUrl() turns the URL query into a single filter,
+ * and the same filter feeds both List and Kanban (phase-01 risk #2 mitigation).
+ * Peek is a client overlay driven by ?peek=<id>; the list stays mounted so
+ * scroll/context is preserved.
+ *
+ * URL state (§3.3): layout, view, state[], priority[], label[], feature,
+ * source[], confidence[], search, peek, group, sort.
  */
 export default async function WorkItemsPage({
   params,
@@ -29,66 +38,41 @@ export default async function WorkItemsPage({
   const project = await getProject(wid, pid);
   if (!project) notFound();
 
-  const states = await listStates(wid, pid);
-  const stateById = new Map(states.map((s) => [s.id, s]));
-
   const search = await searchParams;
-  const filter: Parameters<typeof listWorkItems>[2] = {};
-  const sg = search.status_group;
-  if (typeof sg === "string") filter.statusGroup = sg as (typeof filter)["statusGroup"];
-  if (typeof search.state_id === "string") filter.stateId = search.state_id;
-  if (typeof search.priority === "string") filter.priority = search.priority as (typeof filter)["priority"];
-  if (typeof search.type === "string") filter.type = search.type as (typeof filter)["type"];
-  if (typeof search.search === "string") filter.search = search.search;
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(search)) {
+    if (typeof v === "string") qs.set(k, v);
+    else if (Array.isArray(v)) for (const item of v) qs.append(k, item);
+  }
 
-  const items = await listWorkItems(wid, pid, filter);
+  // Same filter for List and Kanban.
+  const filter = buildFilterFromUrl(qs);
+
+  const [states, labels, features, views, items] = await Promise.all([
+    listStates(wid, pid),
+    listLabels(wid, pid),
+    listFeatures(wid, pid),
+    listViews(wid, pid),
+    listWorkItems(wid, pid, filter),
+  ]);
+
+  // Per-work-item label ids (for card/list label chips).
+  const labelIdsByItem = await Promise.all(
+    items.map(async (wi) => [wi.id, await listWorkItemLabelIds(wid, wi.id)] as const),
+  );
+  const labelMap = new Map(labelIdsByItem);
 
   return (
-    <div className="px-5 py-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-[14px] font-semibold text-txt-primary">
-          Work Items
-          <span className="ml-2 text-[12px] font-normal text-txt-tertiary">
-            {items.length}
-          </span>
-        </h2>
-      </div>
-
-      {items.length === 0 ? (
-        <div className="rounded-md border border-border-subtle bg-surface-1 p-8 text-center text-[13px] text-txt-tertiary">
-          No work items match the current filters.
-        </div>
-      ) : (
-        <ul className="divide-y divide-border-subtle rounded-md border border-border-subtle bg-surface-1">
-          {items.map((wi) => {
-            const state = wi.stateId ? stateById.get(wi.stateId) : undefined;
-            return (
-              <li key={wi.id}>
-                <Link
-                  href={`/workspaces/${wid}/projects/${pid}/work-items/${wi.id}`}
-                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2"
-                >
-                  <span className="w-16 shrink-0 font-mono-app text-[11px] text-txt-tertiary">
-                    {wi.projectIdentifier}-{wi.sequenceId}
-                  </span>
-                  <StatusBadge group={wi.statusGroup} />
-                  <span className="flex-1 truncate text-[13px] text-txt-primary">
-                    {wi.title}
-                  </span>
-                  {state ? (
-                    <span className="text-[11px] text-txt-secondary">
-                      {state.name}
-                    </span>
-                  ) : null}
-                  <span className="text-[11px] capitalize text-txt-tertiary">
-                    {wi.priority}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+    <WorkItemsSurface
+      workspaceId={wid}
+      projectId={pid}
+      states={states}
+      labels={labels}
+      features={features}
+      views={views}
+      items={items}
+      labelIdsByItem={labelMap}
+      currentSearch={qs.toString()}
+    />
   );
 }

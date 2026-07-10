@@ -15,4 +15,20 @@ export {
   type CreateWorkItemInput,
   type UpdateWorkItemInput,
   type ListWorkItemsFilter,
+  type EventRow,
 } from "./work-item";
+export {
+  viewService,
+  type ViewService,
+  type CreateViewInput,
+  type UpdateViewInput,
+  type ViewQuery,
+  type ViewDisplay,
+  parseViewQuery,
+  parseViewDisplay,
+} from "./view";
+export {
+  cycleService,
+  type CycleService,
+  type CreateCycleInput,
+} from "./cycle";

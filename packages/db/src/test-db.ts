@@ -21,7 +21,11 @@ export function createInMemoryDb(): DbClient {
   const raw = new Database(":memory:");
   raw.pragma("foreign_keys = ON");
 
-  for (const file of ["0000_initial_events.sql", "0001_core_tables.sql"]) {
+  for (const file of [
+    "0000_initial_events.sql",
+    "0001_core_tables.sql",
+    "0002_steady_marvex.sql",
+  ]) {
     const sql = readFileSync(resolve(MIGRATIONS_DIR, file), "utf8");
     raw.exec(sql);
   }

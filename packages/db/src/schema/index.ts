@@ -40,3 +40,17 @@ export {
 } from "./work-items";
 export { workItemLabels, type WorkItemLabel, type NewWorkItemLabel } from "./work-item-labels";
 export { projectCounters, type ProjectCounter, type NewProjectCounter } from "./project-counters";
+export {
+  views,
+  VIEW_LAYOUTS,
+  type ViewLayout,
+  type View,
+  type NewView,
+} from "./views";
+export {
+  cycles,
+  CYCLE_STATUSES,
+  type CycleStatus,
+  type Cycle,
+  type NewCycle,
+} from "./cycles";

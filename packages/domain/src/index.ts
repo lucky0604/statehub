@@ -17,6 +17,10 @@ export {
   type Priority,
   type ConfidenceLevel,
   type WorkItemSource,
+  type View,
+  type ViewLayout,
+  type Cycle,
+  type CycleStatus,
   type DbClient,
   type SqlStmt,
   type SqlBindValue,
@@ -30,6 +34,7 @@ export {
   ConflictError,
   ValidationError,
   ForbiddenError,
+  rethrowUniqueViolation,
 } from "./errors";
 
 // Services
@@ -61,6 +66,18 @@ export {
   type CreateWorkItemInput,
   type UpdateWorkItemInput,
   type ListWorkItemsFilter,
+  type EventRow,
+  viewService,
+  type ViewService,
+  type CreateViewInput,
+  type UpdateViewInput,
+  type ViewQuery,
+  type ViewDisplay,
+  parseViewQuery,
+  parseViewDisplay,
+  cycleService,
+  type CycleService,
+  type CreateCycleInput,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)
@@ -71,4 +88,6 @@ export {
   mapLabel,
   mapFeature,
   mapWorkItem,
+  mapView,
+  mapCycle,
 } from "./mappers";

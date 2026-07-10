@@ -52,3 +52,23 @@ export class ForbiddenError extends DomainError {
     this.name = "ForbiddenError";
   }
 }
+
+/**
+ * Detect a SQLite unique-constraint violation (better-sqlite3 SqliteError or
+ * D1 error) and rethrow as AlreadyExistsError. Used to wrap the TOCTOU window
+ * between a uniqueness pre-check and the INSERT: a concurrent dupe create would
+ * otherwise surface as a raw 500 instead of a 409 conflict.
+ */
+export function rethrowUniqueViolation(
+  resource: string,
+  key: string,
+  e: unknown,
+): never {
+  const msg = e instanceof Error ? e.message : String(e);
+  // SQLITE_CONSTRAINT_UNIQUE code is 2067; both drivers also put "UNIQUE" in
+  // the message. Match either to stay driver-agnostic.
+  if (/unique constraint/i.test(msg) || /\bUNIQUE\b/.test(msg)) {
+    throw new AlreadyExistsError(resource, key);
+  }
+  throw e;
+}

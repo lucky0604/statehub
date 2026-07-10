@@ -11,6 +11,8 @@ import type {
   Label,
   Feature,
   WorkItem,
+  View,
+  Cycle,
 } from "@statehub/db";
 
 type Row = Record<string, unknown>;
@@ -123,6 +125,46 @@ export function mapWorkItem(r: Row): WorkItem {
     startDate: (r.start_date as number | null) ?? null,
     targetDate: (r.target_date as number | null) ?? null,
     completedAt: (r.completed_at as number | null) ?? null,
+    sortOrder: r.sort_order as number,
+    createdAt: r.created_at as number,
+    updatedAt: r.updated_at as number,
+    deletedAt: (r.deleted_at as number | null) ?? null,
+    version: r.version as number,
+    createdBy: (r.created_by as string | null) ?? null,
+    updatedBy: (r.updated_by as string | null) ?? null,
+  };
+}
+
+export function mapView(r: Row): View {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: r.project_id as string,
+    ownerId: (r.owner_id as string | null) ?? null,
+    name: r.name as string,
+    layout: r.layout as View["layout"],
+    queryJson: r.query_json as string,
+    displayJson: (r.display_json as string | null) ?? "{}",
+    isDefault: r.is_default as number,
+    sortOrder: r.sort_order as number,
+    createdAt: r.created_at as number,
+    updatedAt: r.updated_at as number,
+    deletedAt: (r.deleted_at as number | null) ?? null,
+    version: r.version as number,
+    createdBy: (r.created_by as string | null) ?? null,
+    updatedBy: (r.updated_by as string | null) ?? null,
+  };
+}
+
+export function mapCycle(r: Row): Cycle {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: r.project_id as string,
+    name: r.name as string,
+    status: r.status as Cycle["status"],
+    startDate: (r.start_date as number | null) ?? null,
+    endDate: (r.end_date as number | null) ?? null,
     sortOrder: r.sort_order as number,
     createdAt: r.created_at as number,
     updatedAt: r.updated_at as number,

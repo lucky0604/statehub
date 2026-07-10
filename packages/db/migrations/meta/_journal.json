@@ -15,6 +15,13 @@
       "when": 1783605877312,
       "tag": "0001_core_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783661672236,
+      "tag": "0002_steady_marvex",
+      "breakpoints": true
     }
   ]
 }

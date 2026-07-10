@@ -55,6 +55,20 @@ export {
   type ProjectCounter,
   type NewProjectCounter,
 } from "./schema/index";
+export {
+  views,
+  VIEW_LAYOUTS,
+  type ViewLayout,
+  type View,
+  type NewView,
+} from "./schema/index";
+export {
+  cycles,
+  CYCLE_STATUSES,
+  type CycleStatus,
+  type Cycle,
+  type NewCycle,
+} from "./schema/index";
 
 // D1 binding accessor (production / wrangler dev)
 export { setD1Binding, getD1, hasD1 } from "./client";
