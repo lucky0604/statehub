@@ -21,6 +21,7 @@ import {
   agentRunService,
   todoService,
   reviewService,
+  evidenceService,
   type WorkItemType,
   type Priority,
 } from "@statehub/domain";
@@ -216,6 +217,72 @@ async function main() {
     );
   } else {
     console.log(`• Reusing ${existingReviews.length} review(s) on feature`);
+  }
+
+  // P04C: seed two pieces of local evidence on the feature — one trusted
+  // (clean commit, repo matches) and one working_tree (dirty). Gives the
+  // EvidencePanel chips and the Done Gate feature_evidence_trusted item
+  // something to render in e2e + dev.
+  const existingEvidence = await evidenceService.listForFeature(db, ws.id, feature.id);
+  const hasTrustedSeed = existingEvidence.some(
+    (e) => e.trustState === "trusted" && e.payloadJson.includes("git_context"),
+  );
+  const hasWorkingTreeSeed = existingEvidence.some(
+    (e) => e.trustState === "working_tree" && e.payloadJson.includes("git_context"),
+  );
+
+  if (!hasTrustedSeed) {
+    await evidenceService.create(db, SOLO_ACTOR, ws.id, {
+      projectId: project.id,
+      featureId: feature.id,
+      evidenceType: "test_result",
+      title: "P04C seeded trusted test run",
+      summary: "Clean commit, repo matches — trust_state=trusted.",
+      payloadJson: JSON.stringify({
+        git_context: {
+          repo_remote_url: "git@github.com:statehub/core.git",
+          git_branch: "main",
+          base_sha: "abc123",
+          head_sha: "def456",
+          dirty_state: false,
+          changed_files: [],
+          untracked_files: [],
+          match_status: "matched",
+        },
+      }),
+      trustState: "trusted",
+      stalenessState: "fresh",
+    });
+    console.log(`✓ Seeded trusted local evidence on feature`);
+  } else {
+    console.log(`• Reusing trusted local evidence on feature`);
+  }
+
+  if (!hasWorkingTreeSeed) {
+    await evidenceService.create(db, SOLO_ACTOR, ws.id, {
+      projectId: project.id,
+      featureId: feature.id,
+      evidenceType: "test_result",
+      title: "P04C seeded working_tree test run",
+      summary: "Dirty working tree — trust_state=working_tree.",
+      payloadJson: JSON.stringify({
+        git_context: {
+          repo_remote_url: "git@github.com:statehub/core.git",
+          git_branch: "feat/x",
+          base_sha: "abc123",
+          head_sha: "def456",
+          dirty_state: true,
+          changed_files: ["src/x.ts"],
+          untracked_files: ["new.txt"],
+          match_status: "matched",
+        },
+      }),
+      trustState: "working_tree",
+      stalenessState: "fresh",
+    });
+    console.log(`✓ Seeded working_tree local evidence on feature`);
+  } else {
+    console.log(`• Reusing working_tree local evidence on feature`);
   }
 }
 

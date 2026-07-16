@@ -1,6 +1,7 @@
 import type { Evidence } from "@statehub/domain";
 import { EvidenceTrustBadge } from "./evidence-trust-badge";
 import { StalenessBadge } from "./staleness-badge";
+import { LocalContextChip } from "./local-context-chip";
 
 /**
  * Evidence Panel — list of structured proof attached to a feature / work item /
@@ -61,6 +62,7 @@ export function EvidencePanel({ evidence, emptyHint = "No evidence yet." }: Prop
               </span>
               <EvidenceTrustBadge state={e.trustState} />
               <StalenessBadge state={e.stalenessState} />
+              <LocalContextChip evidence={e} stalenessState={e.stalenessState} />
               <span className="ml-auto text-[10px] text-txt-tertiary">
                 {new Date(e.createdAt).toLocaleString()}
               </span>
