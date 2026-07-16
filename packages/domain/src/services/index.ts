@@ -43,3 +43,28 @@ export {
   type SummarizeOptions,
   PORTFOLIO_PRIORITY_RANK,
 } from "./project-health";
+export {
+  tokenService,
+  type TokenService,
+  type IssuedToken,
+  type VerifiedToken,
+  requireScope,
+} from "./token";
+export { idempotencyService, type IdempotencyService, type IdempotencyHit, hashRequest } from "./idempotency";
+export {
+  agentRunService,
+  type AgentRunService,
+  type StartAgentRunInput,
+  type CompleteAgentRunInput,
+} from "./agent-run";
+export {
+  todoService,
+  type TodoService,
+  type CreateTodoInput,
+  type UpdateTodoStatusInput,
+} from "./todo";
+export {
+  evidenceService,
+  type EvidenceService,
+  type CreateEvidenceInput,
+} from "./evidence";

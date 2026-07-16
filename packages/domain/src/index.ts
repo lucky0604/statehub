@@ -1,5 +1,5 @@
 // Actor context builders
-export { SOLO_ACTOR, mcpActor, aiPmActor } from "./actor";
+export { SOLO_ACTOR, mcpActor, aiPmActor, remoteMcpActor } from "./actor";
 
 // Re-exported types from @statehub/db so consumers can import from one place.
 export {
@@ -24,6 +24,16 @@ export {
   type ViewLayout,
   type Cycle,
   type CycleStatus,
+  type AgentRun,
+  type AgentRunStatus,
+  type EvidenceTrustState,
+  type Todo,
+  type TodoStatus,
+  type TodoType,
+  type Evidence,
+  type EvidenceType,
+  type EvidenceStalenessState,
+  type TokenScope,
   type DbClient,
   type SqlStmt,
   type SqlBindValue,
@@ -89,6 +99,26 @@ export {
   type HealthNextAction,
   type AtRiskProject,
   PORTFOLIO_PRIORITY_RANK,
+  tokenService,
+  type TokenService,
+  type IssuedToken,
+  type VerifiedToken,
+  requireScope,
+  idempotencyService,
+  type IdempotencyService,
+  type IdempotencyHit,
+  hashRequest,
+  agentRunService,
+  type AgentRunService,
+  type StartAgentRunInput,
+  type CompleteAgentRunInput,
+  todoService,
+  type TodoService,
+  type CreateTodoInput,
+  type UpdateTodoStatusInput,
+  evidenceService,
+  type EvidenceService,
+  type CreateEvidenceInput,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)
@@ -101,4 +131,7 @@ export {
   mapWorkItem,
   mapView,
   mapCycle,
+  mapAgentRun,
+  mapTodo,
+  mapEvidence,
 } from "./mappers";

@@ -12,8 +12,8 @@
  */
 import type { D1Database } from "@cloudflare/workers-types";
 import type Database from "better-sqlite3";
+import { createRequire } from "node:module";
 import { getD1, hasD1 } from "./client";
-import { getRawDb } from "./local-client";
 
 /** Bindable SQLite value. Matches what both D1 and better-sqlite3 accept. */
 export type SqlBindValue = null | string | number | boolean | Uint8Array;
@@ -121,7 +121,17 @@ export function getDb(): DbClient {
     if (hasD1()) {
       _client = new D1Client(getD1());
     } else {
-      _client = new LocalClient(getRawDb());
+      // Lazy-require the local (better-sqlite3) client so it stays out of the
+      // static module graph. This file is only on the runtime path in Node
+      // (next dev, seed scripts); Cloudflare Workers use createD1Client() from
+      // ./d1-client instead and never import getDb(). A static import would pull
+      // better-sqlite3's native-binding deps (bindings, file-uri-to-path) into
+      // the Worker bundle.
+      const require = createRequire(import.meta.url);
+      const localClient = require("./local-client") as {
+        getRawDb: () => Database.Database;
+      };
+      _client = new LocalClient(localClient.getRawDb());
     }
   }
   return _client;

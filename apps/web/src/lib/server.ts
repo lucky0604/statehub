@@ -8,7 +8,7 @@
  * Safe to import from API routes and server components only — better-sqlite3
  * is a native binding and won't work in the Edge runtime or client bundle.
  */
-import { getDb as getDbClient } from "@statehub/db";
+import { getDb as getDbClient } from "@statehub/db/node";
 import { SOLO_ACTOR, type ActorContext } from "@statehub/domain";
 
 export function db() {

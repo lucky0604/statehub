@@ -7,10 +7,12 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./node": "./src/node.ts",
     "./schema": "./src/schema/index.ts",
     "./schema/base": "./src/schema/base.ts",
     "./schema/events": "./src/schema/events.ts",
-    "./client": "./src/client.ts"
+    "./client": "./src/client.ts",
+    "./d1": "./src/d1-client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -13,6 +13,9 @@ import type {
   WorkItem,
   View,
   Cycle,
+  AgentRun,
+  Todo,
+  Evidence,
 } from "@statehub/db";
 
 type Row = Record<string, unknown>;
@@ -175,5 +178,89 @@ export function mapCycle(r: Row): Cycle {
     version: r.version as number,
     createdBy: (r.created_by as string | null) ?? null,
     updatedBy: (r.updated_by as string | null) ?? null,
+  };
+}
+
+export function mapAgentRun(r: Row): AgentRun {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: r.project_id as string,
+    featureId: (r.feature_id as string | null) ?? null,
+    workItemId: (r.work_item_id as string | null) ?? null,
+    agent: r.agent as string,
+    model: (r.model as string | null) ?? null,
+    runType: r.run_type as string,
+    status: r.status as AgentRun["status"],
+    summary: (r.summary as string | null) ?? null,
+    filesChangedJson: r.files_changed_json as string,
+    commandsRunJson: r.commands_run_json as string,
+    testResult: (r.test_result as string | null) ?? null,
+    commitSha: (r.commit_sha as string | null) ?? null,
+    baseSha: (r.base_sha as string | null) ?? null,
+    headSha: (r.head_sha as string | null) ?? null,
+    gitBranch: (r.git_branch as string | null) ?? null,
+    dirtyState: (r.dirty_state as string | null) ?? null,
+    repoRemoteUrl: (r.repo_remote_url as string | null) ?? null,
+    risksJson: r.risks_json as string,
+    nextStepsJson: r.next_steps_json as string,
+    rawArtifactUrl: (r.raw_artifact_url as string | null) ?? null,
+    evidenceTrustState: r.evidence_trust_state as AgentRun["evidenceTrustState"],
+    startedAt: r.started_at as number,
+    finishedAt: (r.finished_at as number | null) ?? null,
+    createdAt: r.created_at as number,
+    updatedAt: r.updated_at as number,
+    deletedAt: (r.deleted_at as number | null) ?? null,
+    version: r.version as number,
+    createdBy: (r.created_by as string | null) ?? null,
+    updatedBy: (r.updated_by as string | null) ?? null,
+  };
+}
+
+export function mapTodo(r: Row): Todo {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: r.project_id as string,
+    featureId: (r.feature_id as string | null) ?? null,
+    workItemId: (r.work_item_id as string | null) ?? null,
+    agentRunId: (r.agent_run_id as string | null) ?? null,
+    title: r.title as string,
+    description: (r.description as string | null) ?? null,
+    status: r.status as Todo["status"],
+    type: r.type as Todo["type"],
+    priority: r.priority as Todo["priority"],
+    source: r.source as Todo["source"],
+    confidence: r.confidence as Todo["confidence"],
+    evidenceRequired: r.evidence_required as number,
+    evidenceSummary: (r.evidence_summary as string | null) ?? null,
+    sortOrder: r.sort_order as number,
+    completedAt: (r.completed_at as number | null) ?? null,
+    createdAt: r.created_at as number,
+    updatedAt: r.updated_at as number,
+    deletedAt: (r.deleted_at as number | null) ?? null,
+    version: r.version as number,
+    createdBy: (r.created_by as string | null) ?? null,
+    updatedBy: (r.updated_by as string | null) ?? null,
+  };
+}
+
+export function mapEvidence(r: Row): Evidence {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: r.project_id as string,
+    featureId: (r.feature_id as string | null) ?? null,
+    workItemId: (r.work_item_id as string | null) ?? null,
+    agentRunId: (r.agent_run_id as string | null) ?? null,
+    evidenceType: r.evidence_type as Evidence["evidenceType"],
+    title: r.title as string,
+    summary: (r.summary as string | null) ?? null,
+    payloadJson: r.payload_json as string,
+    artifactUrl: (r.artifact_url as string | null) ?? null,
+    trustState: r.trust_state as Evidence["trustState"],
+    stalenessState: r.staleness_state as Evidence["stalenessState"],
+    createdAt: r.created_at as number,
+    createdBy: (r.created_by as string | null) ?? null,
   };
 }

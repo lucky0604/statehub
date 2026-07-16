@@ -9,11 +9,8 @@
  *   sequence allocation, feature transitions, event emission, workspace isolation.
  */
 import { describe, it, expect, beforeAll } from "vitest";
-import {
-  setDbClient,
-  createInMemoryDb,
-  type DbClient,
-} from "@statehub/db";
+import { setDbClient, createInMemoryDb } from "@statehub/db/node";
+import type { DbClient } from "@statehub/db";
 import {
   SOLO_ACTOR,
   workspaceService,

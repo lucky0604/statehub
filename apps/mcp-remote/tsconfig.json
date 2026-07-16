@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types"],
+    "paths": {
+      "@statehub/db": ["../../packages/db/src/index.ts"],
+      "@statehub/db/*": ["../../packages/db/src/*"],
+      "@statehub/shared": ["../../packages/shared/src/index.ts"],
+      "@statehub/shared/*": ["../../packages/shared/src/*"],
+      "@statehub/domain": ["../../packages/domain/src/index.ts"],
+      "@statehub/domain/*": ["../../packages/domain/src/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", ".wrangler"]
+}

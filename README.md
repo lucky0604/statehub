@@ -31,6 +31,7 @@ No environment variables required for local dev. The env schema (`packages/confi
 | `pnpm lint` | ESLint across the workspace |
 | `pnpm typecheck` | `tsc --noEmit` across all packages |
 | `pnpm test` | Vitest unit tests |
+| `pnpm test:mcp` | MCP integration tests (SDK client over in-memory transport) |
 | `pnpm e2e` | Playwright (config only at P00) |
 | `pnpm db:generate` | Generate Drizzle migrations from schema |
 | `pnpm db:migrate` | Apply migrations to local D1 |
@@ -41,7 +42,7 @@ No environment variables required for local dev. The env schema (`packages/confi
 ```
 apps/
   web/                Next.js app
-  mcp-remote/         (placeholder, lands P02)
+  mcp-remote/         Remote MCP server (Cloudflare Worker, Streamable HTTP) — P02A
   mcp-local/          (placeholder, lands P04)
   workers/            (placeholder, lands P06)
 packages/

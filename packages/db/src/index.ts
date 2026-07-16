@@ -77,24 +77,56 @@ export {
   type Cycle,
   type NewCycle,
 } from "./schema/index";
+export {
+  agentRuns,
+  AGENT_RUN_STATUSES,
+  EVIDENCE_TRUST_STATES,
+  type AgentRunStatus,
+  type EvidenceTrustState,
+  type AgentRun,
+  type NewAgentRun,
+} from "./schema/index";
+export {
+  todos,
+  TODO_STATUSES,
+  TODO_TYPES,
+  type TodoStatus,
+  type TodoType,
+  type Todo,
+  type NewTodo,
+} from "./schema/index";
+export {
+  evidence,
+  EVIDENCE_STALENESS_STATES,
+  EVIDENCE_TYPES,
+  type EvidenceStalenessState,
+  type EvidenceType,
+  type Evidence,
+  type NewEvidence,
+} from "./schema/index";
+export {
+  personalTokens,
+  TOKEN_SCOPES,
+  type TokenScope,
+  type PersonalToken,
+  type NewPersonalToken,
+} from "./schema/index";
+export {
+  idempotencyRecords,
+  type IdempotencyRecord,
+  type NewIdempotencyRecord,
+} from "./schema/index";
 
 // D1 binding accessor (production / wrangler dev)
 export { setD1Binding, getD1, hasD1 } from "./client";
 
-// Local SQLite client (next dev)
-export { getLocalDb, getRawDb, hasLocalDb } from "./local-client";
+// D1-only client factory (Cloudflare Workers). No better-sqlite3 in the graph.
+export { createD1Client } from "./d1-client";
 
-// In-memory DB factory (tests)
-export { createInMemoryDb } from "./test-db";
-
-// Unified DB client (auto-picks D1 or local)
-export {
-  type DbClient,
-  type SqlStmt,
-  type SqlBindValue,
-  getDb,
-  setDbClient,
-} from "./db-client";
+// Unified DB client types only. The runtime getDb()/setDbClient() live in the
+// node-only subpath (@statehub/db/node) so importing @statehub/db never pulls
+// better-sqlite3 / node:* into a Cloudflare Worker bundle.
+export { type DbClient, type SqlStmt, type SqlBindValue } from "./db-client";
 
 // Transaction + event append
 export {

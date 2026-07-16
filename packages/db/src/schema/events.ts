@@ -102,11 +102,22 @@ export const EVENT_TYPES = [
   "cycle.created",
   "cycle.updated",
   "cycle.deleted",
-  // PRD §10.21 examples not yet emitted (reserved for later phases)
-  "todo.upserted",
-  "todo.status_changed",
+  // agent run (P02A)
   "agent_run.started",
   "agent_run.completed",
+  "agent_run.failed",
+  "agent_run.cancelled",
+  // todo (P02A: created + status; P02B adds upserted)
+  "todo.created",
+  "todo.status_changed",
+  "todo.upserted",
+  // evidence (P02A)
+  "evidence.created",
+  "evidence.linked",
+  // token (P02A — issuance is an audit event; not a domain entity event)
+  "token.issued",
+  "token.revoked",
+  // PRD §10.21 examples not yet emitted (reserved for later phases)
   "review.submitted",
   "finding.created",
   "decision.recorded",

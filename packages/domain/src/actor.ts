@@ -29,6 +29,13 @@ export function mcpActor(name: string, id?: string): ActorContext {
 }
 
 /**
+ * Build an actor context for a remote MCP (token-authenticated agent) action.
+ */
+export function remoteMcpActor(name: string, id?: string): ActorContext {
+  return { type: "remote_mcp", id, name };
+}
+
+/**
  * Build an actor context for the AI PM.
  */
 export function aiPmActor(name = "ai-pm"): ActorContext {

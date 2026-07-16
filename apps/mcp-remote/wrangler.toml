@@ -1,0 +1,16 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "statehub-mcp-remote"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+# db-client.ts (pulled in via the DbClient type chain) imports node:module for
+# its lazy better-sqlite3 require. The Worker never calls that path — it uses
+# createD1Client — but nodejs_compat lets node:module resolve in the bundle.
+compatibility_flags = ["nodejs_compat"]
+
+# Streamable HTTP transport lives at POST /mcp. Auth via Bearer personal token.
+# The Worker shares the same D1 database as the web app (one D1, two entrypoints).
+[[d1_databases]]
+binding = "DB"
+database_name = "statehub-local"
+database_id = "local"
+migrations_dir = "../../packages/db/migrations"

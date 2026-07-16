@@ -29,6 +29,13 @@
       "when": 1783667688842,
       "tag": "0003_daily_kang",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1783682908517,
+      "tag": "0004_watery_hitman",
+      "breakpoints": true
     }
   ]
 }
