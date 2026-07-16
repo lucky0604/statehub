@@ -29,6 +29,7 @@ import {
 } from "@statehub/db";
 import { mapReview, mapReviewFinding } from "../mappers";
 import { workItemService } from "./work-item";
+import { featureService } from "./feature";
 import { NotFoundError, ValidationError } from "../errors";
 
 export interface ReviewFindingInput {
@@ -381,6 +382,28 @@ export const reviewService: ReviewService = {
       [reviewId],
     );
     const findings = findingRows.map(mapReviewFinding);
+
+    // P03B: feature status automation. If the review targets a feature,
+    // verdict is 'needs_changes', and there is at least one open blocker/high
+    // finding, move the feature to 'needs_changes'. Idempotent — if the
+    // feature is already needs_changes (or done), no event is emitted.
+    // phase-03 §6: "review verdict = needs_changes + blocker/high > 0 -> feature needs_changes"
+    if (input.featureId && input.verdict === "needs_changes") {
+      const hasOpenBlockerHigh = findings.some(
+        (f) => f.severity === "blocker" || f.severity === "high",
+      );
+      if (hasOpenBlockerHigh) {
+        const feature = await featureService.get(db, workspaceId, input.featureId);
+        if (feature && feature.status !== "needs_changes" && feature.status !== "done" && feature.status !== "reopened") {
+          try {
+            await featureService.changeStatus(db, actor, workspaceId, input.featureId, "needs_changes");
+          } catch {
+            // If the transition is not allowed (e.g. feature is 'backlog'),
+            // skip the automation — the review is still recorded.
+          }
+        }
+      }
+    }
 
     return { review, findings };
   },

@@ -132,6 +132,7 @@ export {
   type DoneGateService,
   type DoneGateSummary,
   type DoneGateWarning,
+  type DoneGateChecklistItem,
   type DoneGateInput,
   mcpSyncService,
   type McpSyncService,

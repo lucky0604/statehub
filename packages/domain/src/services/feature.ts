@@ -66,7 +66,7 @@ export interface FeatureService {
 const ALLOWED_TRANSITIONS: Record<FeatureStatus, FeatureStatus[]> = {
   backlog: ["planned"],
   planned: ["in_progress", "backlog"],
-  in_progress: ["needs_review", "done", "planned"],
+  in_progress: ["needs_review", "needs_changes", "done", "planned"],
   needs_review: ["needs_changes", "done", "in_progress"],
   needs_changes: ["in_progress"],
   done: ["reopened"],

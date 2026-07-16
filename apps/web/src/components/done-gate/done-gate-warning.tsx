@@ -23,6 +23,8 @@ const CODE_LABELS: Record<DoneGateSummary["warnings"][number]["code"], string> =
   missing_evidence: "Missing evidence",
   open_todos: "Open todos",
   no_completed_runs: "No completed runs",
+  open_blocker_high_findings: "Open blocker/high findings",
+  review_not_approved: "Review not approved",
 };
 
 export function DoneGateWarning({ summary, onMarkReadyForReview }: Props) {
@@ -71,7 +73,11 @@ export function DoneGateWarning({ summary, onMarkReadyForReview }: Props) {
               <span
                 className={cn(
                   "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
-                  w.severity === "warn" ? "bg-warning" : "bg-txt-tertiary",
+                  w.severity === "blocked"
+                    ? "bg-danger"
+                    : w.severity === "warn"
+                      ? "bg-warning"
+                      : "bg-txt-tertiary",
                 )}
                 aria-hidden
               />
