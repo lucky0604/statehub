@@ -8,19 +8,25 @@ import {
   listEvidenceForFeature,
   listTodosForFeature,
   getDoneGate,
+  listFindingsForFeature,
 } from "@/lib/queries";
+import { workItemService, type WorkItem } from "@statehub/domain";
+import { db } from "@/lib/server";
 import { AgentRunTimeline } from "@/components/agent-runs/agent-run-timeline";
 import { EvidencePanel } from "@/components/evidence/evidence-panel";
 import { TodoChecklist } from "@/components/todos/todo-checklist";
 import { DoneGateWarning } from "@/components/done-gate/done-gate-warning";
+import { DoneGateChecklist } from "@/components/done-gate/done-gate-checklist";
+import { FeatureFindings } from "@/components/reviews/feature-findings";
 import { FeatureStatusButton } from "./feature-status-button";
 
 /**
  * Feature Detail page — the surface where an agent's work on a feature becomes
- * visible: timeline, evidence, todos, and the Done Gate v0 warning.
+ * visible: timeline, evidence, todos, the Done Gate v1 checklist, and findings.
  *
  * Source: agent_flow/implementation/v1/phases/phase-02-minimum-agent-sync-loop.md §6
  *         agent_flow/implementation/v1/iterations/20260715-p02c-agent-sync-ui-docs/plan.md
+ *         agent_flow/implementation/v1/iterations/20260716-p03c-ui-e2e-docs/plan.md
  *
  * The project header + Project Health card come from the existing
  * [pid]/layout.tsx; this page is the tab content (replacing the work-items
@@ -44,12 +50,25 @@ export default async function FeatureDetailPage({
   const feature = features.find((f) => f.id === fid);
   if (!feature) notFound();
 
-  const [runs, evidence, todos, gate] = await Promise.all([
+  const [runs, evidence, todos, gate, findings] = await Promise.all([
     listAgentRunsForFeature(wid, fid),
     listEvidenceForFeature(wid, fid),
     listTodosForFeature(wid, fid),
     getDoneGate(wid, fid),
+    listFindingsForFeature(wid, fid),
   ]);
+
+  // Resolve linked work items for the findings (so the FindingCard can show
+  // the STH-N identifier + a deep link to the work item peek).
+  const linkedIds = new Set<string>();
+  for (const f of findings) {
+    if (f.linkedWorkItemId) linkedIds.add(f.linkedWorkItemId);
+  }
+  const workItemById = new Map<string, WorkItem>();
+  for (const id of linkedIds) {
+    const wi = await workItemService.get(db(), wid, id);
+    if (wi) workItemById.set(id, wi);
+  }
 
   return (
     <div className="h-full overflow-y-auto p-4">
@@ -88,8 +107,18 @@ export default async function FeatureDetailPage({
           </div>
         </header>
 
-        {/* Done Gate */}
+        {/* Done Gate v1 checklist (review-aware). v0 warning kept below for
+            backwards compat with P02C e2e — deprecation in a follow-up. */}
+        <DoneGateChecklist summary={gate} />
         <DoneGateWarning summary={gate} />
+
+        {/* Findings section (P03C) */}
+        <FeatureFindings
+          workspaceId={wid}
+          projectId={pid}
+          findings={findings}
+          workItemById={workItemById}
+        />
 
         {/* Two-column layout: timeline + (evidence + todos) */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

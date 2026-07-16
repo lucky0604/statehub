@@ -195,6 +195,17 @@ export interface ReviewService {
     featureId: string,
     limit?: number,
   ): Promise<Review[]>;
+  listFindingsForFeature(
+    db: DbClient,
+    workspaceId: string,
+    featureId: string,
+    limit?: number,
+  ): Promise<ReviewFinding[]>;
+  listFindingsForWorkItem(
+    db: DbClient,
+    workspaceId: string,
+    workItemId: string,
+  ): Promise<ReviewFinding[]>;
   listForProject(
     db: DbClient,
     workspaceId: string,
@@ -431,6 +442,23 @@ export const reviewService: ReviewService = {
       [workspaceId, featureId, cap],
     );
     return rows.map(mapReview);
+  },
+
+  async listFindingsForFeature(db, workspaceId, featureId, limit = 200) {
+    const cap = Math.min(limit, 500);
+    const rows = await db.all<Record<string, unknown>>(
+      "SELECT * FROM review_findings WHERE workspace_id = ? AND feature_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?",
+      [workspaceId, featureId, cap],
+    );
+    return rows.map(mapReviewFinding);
+  },
+
+  async listFindingsForWorkItem(db, workspaceId, workItemId) {
+    const rows = await db.all<Record<string, unknown>>(
+      "SELECT * FROM review_findings WHERE workspace_id = ? AND deleted_at IS NULL AND (work_item_id = ? OR linked_work_item_id = ?) ORDER BY created_at DESC",
+      [workspaceId, workItemId, workItemId],
+    );
+    return rows.map(mapReviewFinding);
   },
 
   async listForProject(db, workspaceId, projectId, limit = 20) {

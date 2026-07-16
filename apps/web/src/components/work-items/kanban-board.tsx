@@ -243,7 +243,14 @@ function KanbanCard({
       <div className="mb-1 font-mono-app text-[10px] text-txt-tertiary">
         {wi.projectIdentifier}-{wi.sequenceId}
       </div>
-      <div className="mb-2 text-[13px] text-txt-primary">{wi.title}</div>
+      <div className="mb-2 text-[13px] text-txt-primary">
+        {wi.title.startsWith("[review_fix]") ? (
+          <span className="mr-1 inline-flex items-center rounded-xs bg-warning/15 px-1 py-0.5 align-middle text-[10px] font-medium text-warning">
+            review_fix
+          </span>
+        ) : null}
+        {wi.title}
+      </div>
       <div className="flex flex-wrap items-center gap-1">
         {wi.priority !== "none" ? (
           <span className="rounded-xs bg-layer-2 px-1.5 py-0.5 text-[10px] capitalize text-txt-secondary">

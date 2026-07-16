@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 
 import type { State, Label, Feature, WorkItem, EventRow } from "@statehub/domain";
 import { StatusBadge } from "@/components/status-badge";
+import { WorkItemFindings } from "@/components/reviews/work-item-findings";
 import { api, ApiError } from "@/lib/api-client";
 
 interface Props {
@@ -229,6 +230,13 @@ export function PeekDrawer({
                   <p className="text-[12px] text-txt-tertiary italic">No description.</p>
                 )}
               </div>
+
+              {/* Findings (linked + targeting) */}
+              <WorkItemFindings
+                workspaceId={workspaceId}
+                projectId={projectId}
+                workItemId={workItemId}
+              />
 
               {/* Activity (events) */}
               <div>

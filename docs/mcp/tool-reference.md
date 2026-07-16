@@ -1,6 +1,6 @@
 # StateHub MCP Tool Reference
 
-The StateHub remote MCP server exposes seven tools at `POST /mcp` using the
+The StateHub remote MCP server exposes nine tools at `POST /mcp` using the
 Streamable HTTP transport. Auth is Bearer: the `Authorization` header must
 contain a workspace-scoped personal access token (`Bearer sth_…`).
 
@@ -30,8 +30,8 @@ Common error codes:
 | Scope                 | Tools                                                  |
 |-----------------------|--------------------------------------------------------|
 | `read`                | `get_current_focus`, `get_feature_context`             |
-| `write_agent_state`   | `start_agent_run`, `complete_agent_run`, `upsert_work_items`, `upsert_todos`, `update_todo_status` |
-| `write_review`        | reserved for P03 (review ledger writes)                |
+| `write_agent_state`   | `start_agent_run`, `complete_agent_run`, `upsert_work_items`, `upsert_todos`, `update_todo_status`, `submit_review`, `create_followup_todos_from_review` |
+| `write_review`        | reserved for human-in-the-loop review writes (web UI only in P03) |
 
 Token scopes are **immutable** after issuance. To change scopes, revoke and
 re-issue.
@@ -349,6 +349,136 @@ event, no version bump, no row change.
 
 ---
 
+## 8. `submit_review`
+
+> Record a structured review (verdict + findings) against a feature, work item,
+> or agent run. Returns `{ review_id, findings_count }`.
+
+**Scope:** `write_agent_state`
+
+**Idempotent:** yes, on `idempotency_key`.
+
+**Side effects:**
+- Creates one `reviews` row + N `review_findings` rows in one atomic batch.
+- Emits `review.submitted` + one `finding.created` per finding.
+- **Feature status automation (phase-03 §6):** if the review targets a feature,
+  `verdict='needs_changes'`, and at least one open blocker/high finding is
+  recorded, the feature is flipped to `needs_changes`. Idempotent — no
+  `feature.status_changed` event if the feature is already `needs_changes`,
+  `done`, or `reopened`.
+
+**Args:**
+
+| name              | type   | required | notes                                                         |
+|-------------------|--------|----------|---------------------------------------------------------------|
+| `project_id`      | string | yes      | Must be in the token's workspace.                             |
+| `feature_id`      | string | no       | Optional feature the review targets.                          |
+| `work_item_id`    | string | no       | Optional work item the review targets.                        |
+| `agent_run_id`    | string | no       | Optional agent run the review targets.                        |
+| `reviewer`        | string | yes      | Reviewer name, e.g. `codex` or `gpt-5`.                       |
+| `model`           | string | no       | Optional model identifier.                                    |
+| `verdict`         | enum   | yes      | `approved` \| `needs_changes` \| `blocked` \| `informational`. |
+| `summary`         | string | no       | Optional human-readable summary.                              |
+| `confidence`      | enum   | no       | `high` \| `medium` \| `low` \| `none`. Default `none`.        |
+| `findings`        | array  | yes      | Array of finding objects (may be empty for `approved`).       |
+| `idempotency_key` | string | yes      | Client-generated; replaying returns the first result.         |
+| `dry_run`         | bool   | no       | If true, return the would-be action with no DB write.         |
+
+**Finding object shape:**
+
+| name          | type   | required | notes                                              |
+|---------------|--------|----------|----------------------------------------------------|
+| `severity`    | enum   | yes      | `blocker` \| `high` \| `medium` \| `low` \| `nit`. |
+| `title`       | string | yes      | One-line summary.                                  |
+| `description` | string | no       | Longer explanation.                                |
+| `file_path`   | string | no       | File the finding refers to.                        |
+| `line_start`  | int    | no       | Start line (1-based).                              |
+| `line_end`    | int    | no       | End line (inclusive).                              |
+| `suggestion`  | string | no       | Suggested fix.                                     |
+| `feature_id`  | string | no       | Override the review's feature for this finding.   |
+| `work_item_id`| string | no       | Override the review's work item for this finding. |
+
+**Returns:**
+
+```json
+{
+  "review_id": "rv_…",
+  "findings_count": 2,
+  "action": "created"
+}
+```
+
+**Errors:**
+- `validation_error` — empty `reviewer`, missing `verdict`, or a finding with empty `title` / missing `severity`.
+- `not_found` — project / feature / work item / agent run not in the token's workspace.
+- `idempotency_conflict` — `idempotency_key` reused with different args.
+
+**Notes:**
+- Reviews target a feature, work item, agent run, or project. At least one
+  of `feature_id` / `work_item_id` / `agent_run_id` should be set for the
+  review to be useful; a project-only review is allowed but rare.
+- An `approved` verdict with zero findings is the cleanest review.
+- The web UI's Review Ledger at `/workspaces/:wid/reviews` lists every
+  review; the Feature Detail page groups findings by severity.
+
+---
+
+## 9. `create_followup_todos_from_review`
+
+> Walk the open blocker/high findings on a review and create one `review_fix`
+> work item per finding, linked back via `linked_work_item_id`. Returns the
+> created + skipped lists.
+
+**Scope:** `write_agent_state`
+
+**Idempotent:** yes, on `idempotency_key`. Re-running on the same review
+without changes is a `noop` — already-linked findings are skipped.
+
+**Args:**
+
+| name              | type     | required | notes                                                              |
+|-------------------|----------|----------|--------------------------------------------------------------------|
+| `review_id`       | string   | yes      | The review to walk.                                                |
+| `severities`      | string[] | no       | Override which severities get fix items. Default `["blocker","high"]`. Rejects `low`/`nit` to prevent scope pollution (phase-03 §10 risk 2). |
+| `idempotency_key` | string   | yes      | Client-generated; replaying returns the first result.              |
+| `dry_run`         | bool     | no       | If true, return the would-be action with no DB write.              |
+
+**Returns:**
+
+```json
+{
+  "created_fixes": [
+    { "work_item_id": "wi_…", "sequence_id": 17, "identifier": "ATLAS-17", "finding_id": "fi_…", "severity": "blocker" }
+  ],
+  "skipped_findings": [
+    { "finding_id": "fi_…", "severity": "low", "reason": "severity_filtered" }
+  ],
+  "action": "created"
+}
+```
+
+`skipped_findings[].reason` is one of:
+- `severity_filtered` — finding severity not in the requested set.
+- `already_linked` — finding already has a `linked_work_item_id`, or is in a
+  terminal status (`fixed`, `dismissed`, `wontfix`).
+
+**Errors:**
+- `validation_error` — `severities` includes `low` or `nit` (would pollute
+  project scope).
+- `not_found` — review not in the token's workspace.
+- `idempotency_conflict` — `idempotency_key` reused with different args.
+
+**Notes:**
+- The created work item's title is `[review_fix] ${finding.title}` so the
+  UI can badge it. Priority is derived from severity: `blocker → urgent`,
+  `high → high`, `medium → medium`.
+- The finding's `linked_work_item_id` is set in the same transaction; a
+  `finding.linked` event is emitted.
+- The web UI shows a `review_fix` badge in the work-item list/kanban for any
+  work item whose title starts with `[review_fix]`.
+
+---
+
 ## Typical session sequence
 
 ```
@@ -360,7 +490,11 @@ upsert_work_items           → record any new scope-affecting tasks
 upsert_todos                → record checklist subtasks for the run
 update_todo_status          → flip todos to in_progress / done as you go
 complete_agent_run          → record summary + files + commands + tests
+submit_review               → record a structured review (verdict + findings)
+create_followup_todos_from_review → create review_fix work items for blocker/high findings
 ```
 
 Open the web UI → Feature Detail page to see the run in the timeline, the
-todos in the checklist, and the Done Gate summary.
+todos in the checklist, the findings grouped by severity, the Done Gate v1
+checklist, and the Review Ledger at `/workspaces/:wid/reviews` for every
+review in the workspace.

@@ -12,6 +12,7 @@
 import { getDb } from "@statehub/db/node";
 import {
   SOLO_ACTOR,
+  remoteMcpActor,
   workspaceService,
   projectService,
   stateService,
@@ -19,6 +20,7 @@ import {
   workItemService,
   agentRunService,
   todoService,
+  reviewService,
   type WorkItemType,
   type Priority,
 } from "@statehub/domain";
@@ -90,7 +92,18 @@ async function main() {
   ];
 
   let created = 0;
+  let reused = 0;
+  // Idempotent: skip work items that already exist with the same title in
+  // this project. The original seed created duplicates on re-run; that broke
+  // e2e tests that match by title (e.g. smoke.spec.ts). Re-running the seed
+  // is now safe — sequences stay stable.
+  const existingItems = await workItemService.list(db, ws.id, project.id, {});
+  const existingTitles = new Set(existingItems.map((wi) => wi.title));
   for (const item of seedItems) {
+    if (existingTitles.has(item.title)) {
+      reused++;
+      continue;
+    }
     const wi = await workItemService.create(db, SOLO_ACTOR, ws.id, project.id, {
       title: item.title,
       type: item.type,
@@ -102,7 +115,7 @@ async function main() {
     console.log(`  ✓ ${wi.projectIdentifier}-${wi.sequenceId} ${wi.title}`);
   }
 
-  console.log(`\n✓ Seeded ${created} work items`);
+  console.log(`\n✓ Seeded ${created} work items${reused > 0 ? ` (reused ${reused} existing)` : ""}`);
 
   // P02C: seed one completed agent run with evidence so the Feature Detail
   // timeline + Done Gate have something to render in e2e + dev.
@@ -159,6 +172,50 @@ async function main() {
     console.log(`✓ Seeded done todo ${doneTodo.todo.id} (with evidence_summary)`);
   } else {
     console.log(`• Reusing ${existingTodos.length} todo(s) on feature`);
+  }
+
+  // P03C: seed one review with one high + one low finding + one linked
+  // review_fix work item, so the Review Ledger, Feature Detail findings, Done
+  // Gate v1 checklist, and Work Item Peek have data in e2e + dev.
+  const existingReviews = await reviewService.listForFeature(db, ws.id, feature.id);
+  if (existingReviews.length === 0) {
+    const actor = remoteMcpActor("codex", "seed-token-1");
+    const submitted = await reviewService.submit(db, actor, ws.id, {
+      projectId: project.id,
+      featureId: feature.id,
+      reviewer: "codex",
+      model: "gpt-5",
+      verdict: "needs_changes",
+      summary: "P03C seeded review — needs changes with one high + one low finding.",
+      confidence: "high",
+      findings: [
+        {
+          severity: "high",
+          title: "P03C seeded high finding",
+          description: "A high-severity issue found by the seeded review.",
+          filePath: "apps/web/app/api/workspaces/route.ts",
+          lineStart: 12,
+          lineEnd: 18,
+          suggestion: "Wrap the handler in withEnvelope for a consistent response shape.",
+        },
+        {
+          severity: "low",
+          title: "P03C seeded low finding",
+          description: "A low-severity polish suggestion.",
+        },
+      ],
+    });
+    console.log(`✓ Seeded review ${submitted.review.id} (verdict=needs_changes, 2 findings)`);
+
+    // Create a review_fix work item for the high finding + link it back.
+    const followup = await reviewService.createFollowupFixes(db, actor, ws.id, {
+      reviewId: submitted.review.id,
+    });
+    console.log(
+      `✓ Created ${followup.createdFixes.length} review_fix work item(s) (skipped ${followup.skippedFindings.length})`,
+    );
+  } else {
+    console.log(`• Reusing ${existingReviews.length} review(s) on feature`);
   }
 }
 
