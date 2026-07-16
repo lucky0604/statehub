@@ -39,6 +39,21 @@ import {
   completeAgentRunShape,
   completeAgentRunDescription,
 } from "./tools/complete-agent-run";
+import {
+  upsertWorkItems,
+  upsertWorkItemsShape,
+  upsertWorkItemsDescription,
+} from "./tools/upsert-work-items";
+import {
+  upsertTodos,
+  upsertTodosShape,
+  upsertTodosDescription,
+} from "./tools/upsert-todos";
+import {
+  updateTodoStatus,
+  updateTodoStatusShape,
+  updateTodoStatusDescription,
+} from "./tools/update-todo-status";
 
 /** Per-request authenticated context, captured into tool closures. */
 export interface ToolContext {
@@ -125,6 +140,27 @@ const TOOLS: ToolSpec[] = [
     scope: "write_agent_state",
     shape: completeAgentRunShape,
     run: (ctx, args) => completeAgentRun(ctx.db, ctx.workspaceId, ctx.actor, args as never),
+  },
+  {
+    name: "upsert_work_items",
+    description: upsertWorkItemsDescription,
+    scope: "write_agent_state",
+    shape: upsertWorkItemsShape,
+    run: (ctx, args) => upsertWorkItems(ctx.db, ctx.workspaceId, ctx.actor, args as never),
+  },
+  {
+    name: "upsert_todos",
+    description: upsertTodosDescription,
+    scope: "write_agent_state",
+    shape: upsertTodosShape,
+    run: (ctx, args) => upsertTodos(ctx.db, ctx.workspaceId, ctx.actor, args as never),
+  },
+  {
+    name: "update_todo_status",
+    description: updateTodoStatusDescription,
+    scope: "write_agent_state",
+    shape: updateTodoStatusShape,
+    run: (ctx, args) => updateTodoStatus(ctx.db, ctx.workspaceId, ctx.actor, args as never),
   },
 ];
 

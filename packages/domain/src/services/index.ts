@@ -14,6 +14,8 @@ export {
   type WorkItemService,
   type CreateWorkItemInput,
   type UpdateWorkItemInput,
+  type UpsertWorkItemInput,
+  type UpsertWorkItemResult,
   type ListWorkItemsFilter,
   type EventRow,
 } from "./work-item";
@@ -62,6 +64,8 @@ export {
   type TodoService,
   type CreateTodoInput,
   type UpdateTodoStatusInput,
+  type UpsertTodoInput,
+  type UpsertTodoResult,
 } from "./todo";
 export {
   evidenceService,

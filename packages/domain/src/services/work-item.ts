@@ -60,6 +60,30 @@ export interface UpdateWorkItemInput {
   sortOrder?: number;
 }
 
+/**
+ * Upsert input (P02B). The merge fingerprint is
+ *   (workspace_id, project_id, parent_work_item_id, lower(title))
+ * per phase-02 §4.2 rule 6. Agent-created items default to
+ * source='remote_mcp' + confidence='low' (caller can override).
+ */
+export interface UpsertWorkItemInput {
+  title: string;
+  descriptionMarkdown?: string;
+  featureId?: string;
+  parentWorkItemId?: string;
+  type?: WorkItemType;
+  priority?: Priority;
+  stateId?: string;
+  source?: WorkItemSource;
+  confidence?: ConfidenceLevel;
+  sortOrder?: number;
+}
+
+export interface UpsertWorkItemResult {
+  workItem: WorkItem;
+  action: "created" | "updated" | "noop";
+}
+
 export interface ListWorkItemsFilter {
   /** Single state (legacy single-value filter). */
   stateId?: string;
@@ -102,6 +126,19 @@ export interface WorkItemService {
     projectId: string,
     input: CreateWorkItemInput,
   ): Promise<WorkItem>;
+  /**
+   * Create-or-merge by fingerprint (workspace, project, parent, lower(title)).
+   * Source: phase-02 §4.2 rule 6. On hit, merges non-null fields and bumps
+   * version. On miss, inserts a new row with a fresh sequence_id. Soft-deleted
+   * items are NOT revived — a new row is inserted instead.
+   */
+  upsert(
+    db: DbClient,
+    actor: ActorContext,
+    workspaceId: string,
+    projectId: string,
+    input: UpsertWorkItemInput,
+  ): Promise<UpsertWorkItemResult>;
   get(db: DbClient, workspaceId: string, workItemId: string): Promise<WorkItem | null>;
   list(db: DbClient, workspaceId: string, projectId: string, filter?: ListWorkItemsFilter): Promise<WorkItem[]>;
   update(
@@ -288,6 +325,203 @@ export const workItemService: WorkItemService = {
     );
     if (!row) throw new Error("work item insert failed");
     return mapWorkItem(row);
+  },
+
+  async upsert(db, actor, workspaceId, projectId, input) {
+    if (!input.title?.trim()) throw new ValidationError("title is required");
+
+    const project = await lookupProject(db, workspaceId, projectId);
+
+    // Validate optional parents belong to this workspace.
+    if (input.featureId) {
+      const f = await db.first<{ id: string }>(
+        "SELECT id FROM features WHERE id = ? AND workspace_id = ? AND project_id = ? AND deleted_at IS NULL",
+        [input.featureId, workspaceId, projectId],
+      );
+      if (!f) throw new NotFoundError("feature", input.featureId);
+    }
+    if (input.parentWorkItemId) {
+      const p = await db.first<{ id: string }>(
+        "SELECT id FROM work_items WHERE id = ? AND workspace_id = ? AND project_id = ? AND deleted_at IS NULL",
+        [input.parentWorkItemId, workspaceId, projectId],
+      );
+      if (!p) throw new NotFoundError("work_item", input.parentWorkItemId);
+    }
+    let stateId = input.stateId ?? null;
+    let statusGroup: StatusGroup = "backlog";
+    if (stateId) {
+      const state = await lookupState(db, workspaceId, projectId, stateId);
+      statusGroup = state.status_group;
+    } else {
+      stateId = project.default_state_id ?? null;
+      if (stateId) {
+        const state = await lookupState(db, workspaceId, projectId, stateId);
+        statusGroup = state.status_group;
+      }
+    }
+
+    // Fingerprint lookup: same workspace + project + parent + lower(title),
+    // not soft-deleted. This is the merge key per phase-02 §4.2 rule 6.
+    const existing = await db.first<{ id: string }>(
+      `SELECT id FROM work_items
+       WHERE workspace_id = ? AND project_id = ? AND deleted_at IS NULL
+         AND COALESCE(parent_work_item_id, '') = COALESCE(?, '')
+         AND lower(title) = lower(?)`,
+      [workspaceId, projectId, input.parentWorkItemId ?? null, input.title],
+    );
+
+    const source = input.source ?? (actor.type === "user" ? "user" : actor.type);
+    const confidence = input.confidence ?? (actor.type === "user" ? "none" : "low");
+
+    if (!existing) {
+      const sequenceId = await sequenceService.next(db, projectId);
+      const id = crypto.randomUUID();
+      const params: SqlBindValue[] = [
+        id,
+        workspaceId,
+        projectId,
+        input.featureId ?? null,
+        input.parentWorkItemId ?? null,
+        sequenceId,
+        project.identifier,
+        input.title,
+        input.descriptionMarkdown ?? null,
+        stateId,
+        statusGroup,
+        input.type ?? "task",
+        input.priority ?? "none",
+        source,
+        confidence,
+        null, // start_date
+        null, // target_date
+        null, // completed_at
+        input.sortOrder ?? 0,
+        1,
+        actor.id ?? null,
+        actor.id ?? null,
+      ];
+
+      await withEvent(
+        db,
+        {
+          workspaceId,
+          projectId,
+          workItemId: id,
+          entityType: "work_item",
+          entityId: id,
+          eventType: "work_item.created",
+          actor,
+          source: actor.type === "user" ? "user" : actor.type,
+          payload: {
+            after: {
+              id,
+              sequenceId,
+              identifier: `${project.identifier}-${sequenceId}`,
+              title: input.title,
+              stateId,
+              statusGroup,
+              type: input.type ?? "task",
+              priority: input.priority ?? "none",
+              via: "upsert",
+            },
+          },
+        },
+        () => [
+          {
+            sql: `
+              INSERT INTO work_items (
+                id, workspace_id, project_id, feature_id, parent_work_item_id,
+                sequence_id, project_identifier, title, description_markdown,
+                state_id, status_group, type, priority, source, confidence,
+                start_date, target_date, completed_at, sort_order,
+                version, created_by, updated_by
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            params,
+          },
+        ],
+      );
+
+      const row = await db.first<Record<string, unknown>>(
+        "SELECT * FROM work_items WHERE id = ?",
+        [id],
+      );
+      if (!row) throw new Error("work item upsert insert failed");
+      return { workItem: mapWorkItem(row), action: "created" as const };
+    }
+
+    // Merge: update fields whose value actually changes. Title is the
+    // fingerprint, so we don't update it. State / status_group go via
+    // changeStatus, not upsert.
+    const existingRow = await db.first<Record<string, unknown>>(
+      "SELECT * FROM work_items WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL",
+      [existing.id, workspaceId],
+    );
+    if (!existingRow) throw new NotFoundError("work_item", existing.id);
+    const existingWi = mapWorkItem(existingRow);
+
+    const sets: string[] = [];
+    const params: SqlBindValue[] = [];
+    if (input.descriptionMarkdown !== undefined && input.descriptionMarkdown !== existingWi.descriptionMarkdown) {
+      sets.push("description_markdown = ?");
+      params.push(input.descriptionMarkdown);
+    }
+    if (input.featureId !== undefined && (input.featureId ?? null) !== existingWi.featureId) {
+      sets.push("feature_id = ?");
+      params.push(input.featureId ?? null);
+    }
+    if (input.priority !== undefined && input.priority !== existingWi.priority) {
+      sets.push("priority = ?");
+      params.push(input.priority);
+    }
+    if (input.type !== undefined && input.type !== existingWi.type) {
+      sets.push("type = ?");
+      params.push(input.type);
+    }
+    if (input.confidence !== undefined && input.confidence !== existingWi.confidence) {
+      sets.push("confidence = ?");
+      params.push(input.confidence);
+    }
+    if (input.sortOrder !== undefined && input.sortOrder !== existingWi.sortOrder) {
+      sets.push("sort_order = ?");
+      params.push(input.sortOrder);
+    }
+
+    if (sets.length === 0) {
+      return { workItem: existingWi, action: "noop" as const };
+    }
+
+    sets.push("updated_at = unixepoch() * 1000");
+    sets.push("version = version + 1");
+    sets.push("updated_by = ?");
+    params.push(actor.id ?? null);
+    params.push(existing.id);
+    params.push(workspaceId);
+
+    const updateSql = `UPDATE work_items SET ${sets.join(", ")} WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL`;
+
+    await withEvent(
+      db,
+      {
+        workspaceId,
+        projectId,
+        workItemId: existing.id,
+        entityType: "work_item",
+        entityId: existing.id,
+        eventType: "work_item.updated",
+        actor,
+        source: actor.type === "user" ? "user" : actor.type,
+        payload: { via: "upsert", patch: input },
+      },
+      () => [{ sql: updateSql, params }],
+    );
+
+    const row = await db.first<Record<string, unknown>>(
+      "SELECT * FROM work_items WHERE id = ?",
+      [existing.id],
+    );
+    if (!row) throw new Error("work item upsert update failed");
+    return { workItem: mapWorkItem(row), action: "updated" as const };
   },
 
   async get(db, workspaceId, workItemId) {

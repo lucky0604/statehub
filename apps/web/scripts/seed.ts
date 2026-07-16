@@ -18,6 +18,7 @@ import {
   featureService,
   workItemService,
   agentRunService,
+  todoService,
   type WorkItemType,
   type Priority,
 } from "@statehub/domain";
@@ -123,6 +124,41 @@ async function main() {
     console.log(`✓ Seeded agent run ${run.id} (completed, with evidence)`);
   } else {
     console.log(`• Reusing ${existingRuns.length} agent run(s) on feature`);
+  }
+
+  // P02B: seed two todos on the feature so the Feature Detail checklist has
+  // something to render in e2e + dev: one open + evidence_required, one done
+  // with an evidence_summary. These represent what an agent would create via
+  // upsert_todos + update_todo_status.
+  const existingTodos = await todoService.listForFeature(db, ws.id, feature.id);
+  if (existingTodos.length === 0) {
+    const openTodo = await todoService.upsert(db, SOLO_ACTOR, ws.id, {
+      projectId: project.id,
+      featureId: feature.id,
+      title: "P02B seeded open todo",
+      type: "implementation",
+      priority: "medium",
+      evidenceRequired: 1,
+    });
+    console.log(`✓ Seeded open todo ${openTodo.todo.id} (evidence_required)`);
+
+    const doneTodo = await todoService.upsert(db, SOLO_ACTOR, ws.id, {
+      projectId: project.id,
+      featureId: feature.id,
+      title: "P02B seeded done todo",
+      type: "verification",
+      priority: "low",
+    });
+    await todoService.updateStatus(db, SOLO_ACTOR, ws.id, doneTodo.todo.id, {
+      status: "in_progress",
+    });
+    await todoService.updateStatus(db, SOLO_ACTOR, ws.id, doneTodo.todo.id, {
+      status: "done",
+      evidenceSummary: "seeded e2e evidence summary",
+    });
+    console.log(`✓ Seeded done todo ${doneTodo.todo.id} (with evidence_summary)`);
+  } else {
+    console.log(`• Reusing ${existingTodos.length} todo(s) on feature`);
   }
 }
 
