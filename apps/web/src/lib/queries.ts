@@ -25,6 +25,7 @@ import {
   mcpSyncService,
   doneGateService,
   reviewService,
+  repoAliasService,
   type ListWorkItemsFilter,
   type PortfolioHealth,
   type ProjectHealthSummary,
@@ -197,6 +198,11 @@ export async function listReviewsForWorkItem(
 }
 
 export type { ReviewVerdict };
+
+/** Repo aliases for a project — for Project Settings (P04C). */
+export async function listRepoAliases(workspaceId: string, projectId: string) {
+  return repoAliasService.list(db(), workspaceId, projectId);
+}
 
 /** Derived MCP sync status — for the TopBar indicator. */
 export async function getMcpSync(workspaceId: string): Promise<McpSyncSummary> {

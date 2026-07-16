@@ -1,8 +1,13 @@
 # StateHub MCP Tool Reference
 
-The StateHub remote MCP server exposes nine tools at `POST /mcp` using the
+The StateHub remote MCP server exposes eleven tools at `POST /mcp` using the
 Streamable HTTP transport. Auth is Bearer: the `Authorization` header must
 contain a workspace-scoped personal access token (`Bearer sth_…`).
+
+A separate **local sidecar** (`@statehub/mcp-local`) exposes six more tools
+over stdio MCP for agents that want git context auto-attached. The local
+tools are documented in §10–§15 below; they delegate to the remote tools for
+state-mutating calls.
 
 Every tool returns the standard envelope:
 
@@ -30,7 +35,7 @@ Common error codes:
 | Scope                 | Tools                                                  |
 |-----------------------|--------------------------------------------------------|
 | `read`                | `get_current_focus`, `get_feature_context`             |
-| `write_agent_state`   | `start_agent_run`, `complete_agent_run`, `upsert_work_items`, `upsert_todos`, `update_todo_status`, `submit_review`, `create_followup_todos_from_review` |
+| `write_agent_state`   | `start_agent_run`, `complete_agent_run`, `upsert_work_items`, `upsert_todos`, `update_todo_status`, `submit_review`, `create_followup_todos_from_review`, `start_agent_run_local`, `complete_agent_run_local` |
 | `write_review`        | reserved for human-in-the-loop review writes (web UI only in P03) |
 
 Token scopes are **immutable** after issuance. To change scopes, revoke and
@@ -498,3 +503,124 @@ Open the web UI → Feature Detail page to see the run in the timeline, the
 todos in the checklist, the findings grouped by severity, the Done Gate v1
 checklist, and the Review Ledger at `/workspaces/:wid/reviews` for every
 review in the workspace.
+
+---
+
+## Local sidecar tools (Phase 04)
+
+The `@statehub/mcp-local` sidecar is a separate stdio MCP server that reads
+git context from the local repo and syncs evidence to Remote StateHub. It
+exposes the six tools below. See `docs/local-mcp/install.md` for setup.
+
+The sidecar captures the workspace + project from `.statehub/config.json`
+once at startup. The token is read from `process.env[config.tokenEnv]` at
+request time so rotated tokens don't require a restart. Bearer tokens are
+redacted from any thrown error message.
+
+### 10. `get_local_repo_context`
+
+Read-only. Returns the current repo's git context plus a `project_match_status`
+computed client-side against the project's `repo_url` + aliases + the
+config's `repoAliases`.
+
+```json
+// returns
+{
+  "repo_path": "/path/to/repo",
+  "repo_remote_url": "git@github.com:owner/repo.git",
+  "git_branch": "feat/x",
+  "base_sha": "abc123…",
+  "head_sha": "def456…",
+  "dirty_state": false,
+  "untracked_files": [],
+  "project_match_status": "matched" | "alias_matched" | "unknown"
+}
+```
+
+### 11. `collect_git_evidence`
+
+Read-only. Gathers file lists + diff stat + latest commit. Default-don't-leak:
+diff text is NOT returned unless `include_diff: true` (64KB max).
+
+```json
+// args
+{ "include_diff": false, "include_untracked": true }
+// returns
+{
+  "changed_files": ["README.md"],
+  "untracked_files": ["new.txt"],
+  "diff_stat": { "files_changed": 1, "insertions": 5, "deletions": 2 },
+  "latest_commit": { "sha": "…", "author": "…", "message": "…", "timestamp": 1718000000000 },
+  "dirty_state": true,
+  "diff_text": null
+}
+```
+
+### 12. `record_test_command`
+
+Local-only. Records a test/lint/build command execution and returns a payload
+to feed to `sync_evidence`. Does NOT sync to remote.
+
+```json
+// args
+{
+  "command": "pnpm test",
+  "exit_code": 0,
+  "duration_ms": 4200,
+  "stdout_summary": "✓ 216 tests passed",
+  "stderr_summary": ""
+}
+// returns
+{ "recorded": true, "evidence_payload": { "evidence_type": "command", "command": "pnpm test", "exit_code": 0, "duration_ms": 4200, "success": true, "recorded_at": 1718000000000 } }
+```
+
+### 13. `sync_evidence`
+
+Write. POSTs evidence + current git context to Remote StateHub. Remote derives
+`trust_state` + `staleness_state` from repo identity + dirty state. Idempotent
+on `idempotency_key`.
+
+```json
+// args
+{
+  "evidence_type": "test_result",
+  "title": "pnpm test — all passing",
+  "summary": "216 tests, 0 failures",
+  "feature_id": "feat-…",
+  "idempotency_key": "run-…-test-1"
+}
+// returns
+{ "evidence_id": "ev-…", "trust_state": "working_tree", "staleness_state": "fresh", "match_status": "matched" }
+```
+
+### 14. `start_agent_run_local`
+
+Write. Delegates to the remote `start_agent_run_local` MCP tool, injecting
+`project_id` (from config) + git context (from `get_local_repo_context`).
+Agent supplies `agent`, `run_type`, `model?`, `feature_id?`, `work_item_id?`,
+`idempotency_key`.
+
+```json
+// returns
+{ "run_id": "run-…", "status": "running" }
+```
+
+### 15. `complete_agent_run_local`
+
+Write. Delegates to the remote `complete_agent_run_local` MCP tool, injecting
+git context. If `commit_sha` is not supplied, the sidecar uses the local
+`head_sha`. Returns the derived `evidence_trust_state`.
+
+```json
+// args
+{
+  "run_id": "run-…",
+  "summary": "Implemented feature X. Tests green.",
+  "files_changed": ["src/x.ts"],
+  "commands_run": ["pnpm test"],
+  "test_result": "216 passing",
+  "idempotency_key": "run-…-complete-1"
+}
+// returns
+{ "run_id": "run-…", "status": "completed", "evidence_trust_state": "trusted" }
+```

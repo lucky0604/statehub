@@ -12,6 +12,7 @@ export const ERROR_CODES = [
   "forbidden",
   "not_found",
   "conflict",
+  "repo_conflict",
   "idempotency_conflict",
   "rate_limited",
   "workspace_mismatch",

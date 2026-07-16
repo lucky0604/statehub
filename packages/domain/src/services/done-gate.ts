@@ -45,6 +45,7 @@ export interface DoneGateChecklistItem {
     | "test_result_recorded"
     | "evidence_linked"
     | "evidence_trusted"
+    | "feature_evidence_trusted"
     | "no_open_blocker_high"
     | "review_verdict_approved"
     | "open_todos"
@@ -210,6 +211,51 @@ export function summarize(input: DoneGateInput): DoneGateSummary {
       label: "No open blocker/high findings",
       status: "pass",
     });
+  }
+
+  // 5b. feature_evidence_trusted (P04C) — feature-level trust summary.
+  // Pass: ≥1 evidence on the feature is trusted. Warn: evidence exists but
+  // none trusted (only working_tree). Block: zero evidence OR all
+  // untrusted/unknown. This is broader than `evidence_trusted` (which only
+  // looks at the latest run's evidence) — it gives the user a feature-wide
+  // trust read.
+  {
+    const allEvidence = input.evidence;
+    const trustedCount = allEvidence.filter((e) => e.trustState === "trusted").length;
+    const workingTreeCount = allEvidence.filter((e) => e.trustState === "working_tree").length;
+    const untrustedCount = allEvidence.filter(
+      (e) => e.trustState === "untrusted" || e.trustState === "unknown",
+    ).length;
+
+    if (allEvidence.length === 0) {
+      checklist.push({
+        code: "feature_evidence_trusted",
+        label: "Evidence trust state: at least one trusted source",
+        status: "blocked",
+        detail: "No evidence on this feature yet.",
+      });
+    } else if (trustedCount > 0) {
+      checklist.push({
+        code: "feature_evidence_trusted",
+        label: "Evidence trust state: at least one trusted source",
+        status: "pass",
+        detail: `${trustedCount} trusted evidence row(s).`,
+      });
+    } else if (untrustedCount > 0) {
+      checklist.push({
+        code: "feature_evidence_trusted",
+        label: "Evidence trust state: at least one trusted source",
+        status: "blocked",
+        detail: `${untrustedCount} untrusted/unknown evidence row(s); 0 trusted.`,
+      });
+    } else if (workingTreeCount > 0) {
+      checklist.push({
+        code: "feature_evidence_trusted",
+        label: "Evidence trust state: at least one trusted source",
+        status: "warn",
+        detail: `${workingTreeCount} working_tree evidence row(s); 0 trusted. Commit + re-sync to upgrade.`,
+      });
+    }
   }
 
   // 6. review_verdict_approved — warn (not blocked) if not approved.

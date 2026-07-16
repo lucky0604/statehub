@@ -10,6 +10,7 @@ export {
   type ProjectType,
   type ProjectStatus,
   type PortfolioPriority,
+  type ProjectRepoAlias,
   type State,
   type StatusGroup,
   type Label,
@@ -50,6 +51,7 @@ export {
   NotFoundError,
   AlreadyExistsError,
   ConflictError,
+  RepoConflictError,
   ValidationError,
   ForbiddenError,
   rethrowUniqueViolation,
@@ -149,12 +151,20 @@ export {
   type CreatedFix,
   type SkippedFinding,
   type ListReviewsFilter,
+  repoAliasService,
+  type RepoAliasService,
+  localEvidenceService,
+  type LocalEvidenceService,
+  type IngestLocalEvidenceInput,
+  type IngestLocalEvidenceResult,
+  type RepoMatchStatus,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)
 export {
   mapWorkspace,
   mapProject,
+  mapProjectRepoAlias,
   mapState,
   mapLabel,
   mapFeature,

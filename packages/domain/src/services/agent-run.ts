@@ -25,8 +25,11 @@ import {
   type SqlBindValue,
   withEvent,
 } from "@statehub/db";
+import { normalizeRepoUrl } from "@statehub/shared";
 import { mapAgentRun, mapEvidence, mapTodo } from "../mappers";
 import { ConflictError, NotFoundError, ValidationError } from "../errors";
+import { localEvidenceService, type RepoMatchStatus } from "./local-evidence";
+import { repoAliasService } from "./repo-alias";
 
 export interface StartAgentRunInput {
   projectId: string;
@@ -35,6 +38,12 @@ export interface StartAgentRunInput {
   agent: string;
   model?: string;
   runType: string;
+  /** Local sidecar (P04A) — git context captured at run start. */
+  repoRemoteUrl?: string;
+  gitBranch?: string;
+  baseSha?: string;
+  headSha?: string;
+  dirtyState?: boolean;
 }
 
 export interface CompleteAgentRunInput {
@@ -48,6 +57,9 @@ export interface CompleteAgentRunInput {
   baseSha?: string;
   headSha?: string;
   gitBranch?: string;
+  /** Local sidecar (P04A) — git context at run complete. */
+  repoRemoteUrl?: string;
+  dirtyState?: boolean;
 }
 
 export interface AgentRunService {
@@ -108,6 +120,11 @@ export const agentRunService: AgentRunService = {
       input.runType,
       "running",
       "unknown", // evidence_trust_state
+      input.repoRemoteUrl ? normalizeRepoUrl(input.repoRemoteUrl) : null,
+      input.gitBranch ?? null,
+      input.baseSha ?? null,
+      input.headSha ?? null,
+      input.dirtyState !== undefined ? String(input.dirtyState) : null,
       1,
       actor.id ?? null,
       actor.id ?? null,
@@ -131,8 +148,10 @@ export const agentRunService: AgentRunService = {
         {
           sql: `INSERT INTO agent_runs (
             id, workspace_id, project_id, feature_id, work_item_id,
-            agent, model, run_type, status, evidence_trust_state, version, created_by, updated_by
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            agent, model, run_type, status, evidence_trust_state,
+            repo_remote_url, git_branch, base_sha, head_sha, dirty_state,
+            version, created_by, updated_by
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           params,
         },
       ],
@@ -159,12 +178,40 @@ export const agentRunService: AgentRunService = {
     const risksJson = JSON.stringify(input.risks ?? []);
     const nextStepsJson = JSON.stringify(input.nextSteps ?? []);
     const finishedAt = Date.now();
-    const trustState: EvidenceTrustState = "working_tree";
+
+    // Derive the evidence trust state. P02A default is 'working_tree' (agent-
+    // submitted, not git-verified). P04A: if repo_remote_url is supplied and
+    // matches the project (or one of its aliases), flip to 'trusted' when the
+    // working tree is clean, or 'working_tree' when dirty. Unknown repos stay
+    // at 'working_tree' — the agent still did the work, we just can't verify
+    // the repo identity.
+    let trustState: EvidenceTrustState = "working_tree";
+    const normalizedRepoUrl = input.repoRemoteUrl ? normalizeRepoUrl(input.repoRemoteUrl) : null;
+    if (normalizedRepoUrl) {
+      const project = await db.first<{ repo_url: string | null }>(
+        "SELECT repo_url FROM projects WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL",
+        [existing.projectId, workspaceId],
+      );
+      let matchStatus: RepoMatchStatus = "unknown";
+      if (project?.repo_url && project.repo_url === normalizedRepoUrl) {
+        matchStatus = "matched";
+      } else {
+        const aliases = await repoAliasService.list(db, workspaceId, existing.projectId);
+        if (aliases.some((a) => a.aliasUrl === normalizedRepoUrl)) {
+          matchStatus = "alias_matched";
+        }
+      }
+      if (matchStatus !== "unknown") {
+        trustState = localEvidenceService.deriveTrust(matchStatus, input.dirtyState ?? false);
+      }
+    }
 
     const updateSql = `UPDATE agent_runs SET
       status = 'completed', summary = ?, files_changed_json = ?, commands_run_json = ?,
       test_result = ?, risks_json = ?, next_steps_json = ?,
       commit_sha = ?, base_sha = ?, head_sha = ?, git_branch = ?,
+      repo_remote_url = COALESCE(?, repo_remote_url),
+      dirty_state = COALESCE(?, dirty_state),
       evidence_trust_state = ?, finished_at = ?,
       updated_at = unixepoch() * 1000, version = version + 1, updated_by = ?
       WHERE id = ? AND workspace_id = ? AND status = 'running'`;
@@ -180,6 +227,8 @@ export const agentRunService: AgentRunService = {
       input.baseSha ?? null,
       input.headSha ?? null,
       input.gitBranch ?? null,
+      normalizedRepoUrl,
+      input.dirtyState !== undefined ? String(input.dirtyState) : null,
       trustState,
       finishedAt,
       actor.id ?? null,
@@ -194,6 +243,15 @@ export const agentRunService: AgentRunService = {
       commandsRun: input.commandsRun ?? [],
       testResult: input.testResult ?? null,
       commitSha: input.commitSha ?? null,
+      git_context: normalizedRepoUrl
+        ? {
+            repo_remote_url: normalizedRepoUrl,
+            git_branch: input.gitBranch ?? null,
+            base_sha: input.baseSha ?? null,
+            head_sha: input.headSha ?? null,
+            dirty_state: input.dirtyState ?? false,
+          }
+        : undefined,
     });
 
     await withEvent(
@@ -208,7 +266,7 @@ export const agentRunService: AgentRunService = {
         eventType: "agent_run.completed",
         actor,
         source: actor.type,
-        payload: { from: "running", to: "completed", summary: input.summary, evidenceId },
+        payload: { from: "running", to: "completed", summary: input.summary, evidenceId, trustState },
       },
       () => [
         { sql: updateSql, params: updateParams },
@@ -216,7 +274,7 @@ export const agentRunService: AgentRunService = {
           sql: `INSERT INTO evidence (
             id, workspace_id, project_id, feature_id, work_item_id, agent_run_id,
             evidence_type, title, summary, payload_json, trust_state, staleness_state, created_by
-          ) VALUES (?, ?, ?, ?, ?, ?, 'agent_run', ?, ?, ?, 'working_tree', 'fresh', ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, 'agent_run', ?, ?, ?, ?, 'fresh', ?)`,
           params: [
             evidenceId,
             workspaceId,
@@ -227,6 +285,7 @@ export const agentRunService: AgentRunService = {
             `Agent run: ${input.summary.slice(0, 80)}`,
             input.summary,
             evidencePayload,
+            trustState,
             actor.id ?? null,
           ] as SqlBindValue[],
         },

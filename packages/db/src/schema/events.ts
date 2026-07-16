@@ -76,6 +76,9 @@ export const EVENT_TYPES = [
   "project.created",
   "project.updated",
   "project.deleted",
+  // P04A: repo identity management
+  "project.repo_alias_added",
+  "project.repo_alias_removed",
   // state
   "state.created",
   "state.updated",
@@ -114,6 +117,8 @@ export const EVENT_TYPES = [
   // evidence (P02A)
   "evidence.created",
   "evidence.linked",
+  // P04A: local sidecar ingestion
+  "evidence.local_ingested",
   // token (P02A — issuance is an audit event; not a domain entity event)
   "token.issued",
   "token.revoked",

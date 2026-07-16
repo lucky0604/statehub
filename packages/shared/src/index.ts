@@ -22,3 +22,5 @@ export {
   serializeUrlState,
   type UrlStateKey,
 } from "./url-state";
+
+export { normalizeRepoUrl } from "./repo-url";

@@ -64,6 +64,16 @@ import {
   createFollowupTodosFromReviewShape,
   createFollowupTodosFromReviewDescription,
 } from "./tools/create-followup-todos-from-review";
+import {
+  startAgentRunLocal,
+  startAgentRunLocalShape,
+  startAgentRunLocalDescription,
+} from "./tools/start-agent-run-local";
+import {
+  completeAgentRunLocal,
+  completeAgentRunLocalShape,
+  completeAgentRunLocalDescription,
+} from "./tools/complete-agent-run-local";
 
 /** Per-request authenticated context, captured into tool closures. */
 export interface ToolContext {
@@ -185,6 +195,20 @@ const TOOLS: ToolSpec[] = [
     scope: "write_agent_state",
     shape: createFollowupTodosFromReviewShape,
     run: (ctx, args) => createFollowupTodosFromReview(ctx.db, ctx.workspaceId, ctx.actor, args as never),
+  },
+  {
+    name: "start_agent_run_local",
+    description: startAgentRunLocalDescription,
+    scope: "write_agent_state",
+    shape: startAgentRunLocalShape,
+    run: (ctx, args) => startAgentRunLocal(ctx.db, ctx.workspaceId, ctx.actor, args as never),
+  },
+  {
+    name: "complete_agent_run_local",
+    description: completeAgentRunLocalDescription,
+    scope: "write_agent_state",
+    shape: completeAgentRunLocalShape,
+    run: (ctx, args) => completeAgentRunLocal(ctx.db, ctx.workspaceId, ctx.actor, args as never),
   },
 ];
 

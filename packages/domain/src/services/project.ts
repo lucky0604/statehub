@@ -20,6 +20,7 @@ import {
   type SqlBindValue,
   withEvent,
 } from "@statehub/db";
+import { normalizeRepoUrl } from "@statehub/shared";
 import { mapProject } from "../mappers";
 import { AlreadyExistsError, NotFoundError, ValidationError } from "../errors";
 
@@ -31,6 +32,7 @@ export interface CreateProjectInput {
   type?: ProjectType;
   status?: ProjectStatus;
   portfolioPriority?: PortfolioPriority;
+  repoUrl?: string | null;
 }
 
 export interface UpdateProjectInput {
@@ -41,6 +43,7 @@ export interface UpdateProjectInput {
   type?: ProjectType | null;
   status?: ProjectStatus;
   portfolioPriority?: PortfolioPriority;
+  repoUrl?: string | null;
 }
 
 export interface ProjectService {
@@ -157,6 +160,7 @@ interface NewProjectRow {
   type: string | null;
   status: string;
   portfolioPriority: string;
+  repoUrl: string | null;
   version: number;
   createdBy: string | null;
   updatedBy: string | null;
@@ -168,9 +172,9 @@ function projectInsertStmt(p: NewProjectRow): { sql: string; params: SqlBindValu
       INSERT INTO projects (
         id, workspace_id, slug, name, description, identifier,
         default_state_id, default_assignee_id,
-        type, status, portfolio_priority,
+        type, status, portfolio_priority, repo_url,
         version, created_by, updated_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     params: [
       p.id,
@@ -184,6 +188,7 @@ function projectInsertStmt(p: NewProjectRow): { sql: string; params: SqlBindValu
       p.type ?? null,
       p.status,
       p.portfolioPriority,
+      p.repoUrl,
       p.version,
       p.createdBy ?? null,
       p.updatedBy ?? null,
@@ -289,6 +294,7 @@ export const projectService: ProjectService = {
       type: input.type ?? null,
       status: input.status ?? "active",
       portfolioPriority: input.portfolioPriority ?? "P1",
+      repoUrl: input.repoUrl ? normalizeRepoUrl(input.repoUrl) : null,
       version: 1,
       createdBy: actor.id ?? null,
       updatedBy: actor.id ?? null,
@@ -413,6 +419,11 @@ export const projectService: ProjectService = {
     if (patch.portfolioPriority !== undefined) {
       sets.push("portfolio_priority = ?");
       params.push(patch.portfolioPriority);
+    }
+    if (patch.repoUrl !== undefined) {
+      const normalized = patch.repoUrl ? normalizeRepoUrl(patch.repoUrl) : null;
+      sets.push("repo_url = ?");
+      params.push(normalized);
     }
     if (sets.length === 0) return existing;
 

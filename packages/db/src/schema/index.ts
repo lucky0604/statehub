@@ -21,6 +21,11 @@ export {
   type NewProject,
 } from "./projects";
 export {
+  projectRepoAliases,
+  type ProjectRepoAlias,
+  type NewProjectRepoAlias,
+} from "./project-repo-aliases";
+export {
   states,
   STATUS_GROUPS,
   type StatusGroup,

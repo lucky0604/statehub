@@ -8,6 +8,7 @@ import {
   GitBranch,
   LayoutDashboard,
   ListFilter,
+  Plug,
   ScanSearch,
   Settings,
   Target,
@@ -54,6 +55,11 @@ export function Sidebar({
       href: workspaceId ? `/workspaces/${workspaceId}/agent-runs` : null,
     },
     { label: "Decisions", icon: GitBranch, href: "/" },
+    {
+      label: "Local MCP",
+      icon: Plug,
+      href: workspaceId ? `/workspaces/${workspaceId}/settings/local-mcp` : null,
+    },
     {
       label: "Settings",
       icon: Settings,
