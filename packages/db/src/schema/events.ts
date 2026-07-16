@@ -120,6 +120,9 @@ export const EVENT_TYPES = [
   // PRD §10.21 examples not yet emitted (reserved for later phases)
   "review.submitted",
   "finding.created",
+  // P03A: finding lifecycle events
+  "finding.status_changed",
+  "finding.linked",
   "decision.recorded",
 ] as const;
 

@@ -43,7 +43,11 @@ export function Sidebar({
     { label: "Projects", icon: FolderKanban, href: "/" },
     { label: "Saved Views", icon: ListFilter, href: "/" },
     { label: "Current Focus", icon: Target, href: "/" },
-    { label: "Reviews", icon: ScanSearch, href: "/" },
+    {
+      label: "Reviews",
+      icon: ScanSearch,
+      href: workspaceId ? `/workspaces/${workspaceId}/reviews` : null,
+    },
     {
       label: "Agent Runs",
       icon: Bot,

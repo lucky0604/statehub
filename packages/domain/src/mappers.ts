@@ -16,6 +16,8 @@ import type {
   AgentRun,
   Todo,
   Evidence,
+  Review,
+  ReviewFinding,
 } from "@statehub/db";
 
 type Row = Record<string, unknown>;
@@ -262,5 +264,57 @@ export function mapEvidence(r: Row): Evidence {
     stalenessState: r.staleness_state as Evidence["stalenessState"],
     createdAt: r.created_at as number,
     createdBy: (r.created_by as string | null) ?? null,
+  };
+}
+
+export function mapReview(r: Row): Review {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: r.project_id as string,
+    featureId: (r.feature_id as string | null) ?? null,
+    workItemId: (r.work_item_id as string | null) ?? null,
+    agentRunId: (r.agent_run_id as string | null) ?? null,
+    reviewer: r.reviewer as string,
+    model: (r.model as string | null) ?? null,
+    verdict: r.verdict as Review["verdict"],
+    summary: (r.summary as string | null) ?? null,
+    confidence: r.confidence as Review["confidence"],
+    createdAt: r.created_at as number,
+    updatedAt: r.updated_at as number,
+    deletedAt: (r.deleted_at as number | null) ?? null,
+    version: r.version as number,
+    createdBy: (r.created_by as string | null) ?? null,
+    updatedBy: (r.updated_by as string | null) ?? null,
+  };
+}
+
+export function mapReviewFinding(r: Row): ReviewFinding {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    reviewId: r.review_id as string,
+    projectId: r.project_id as string,
+    featureId: (r.feature_id as string | null) ?? null,
+    workItemId: (r.work_item_id as string | null) ?? null,
+    severity: r.severity as ReviewFinding["severity"],
+    title: r.title as string,
+    description: (r.description as string | null) ?? null,
+    filePath: (r.file_path as string | null) ?? null,
+    lineStart: (r.line_start as number | null) ?? null,
+    lineEnd: (r.line_end as number | null) ?? null,
+    suggestion: (r.suggestion as string | null) ?? null,
+    status: r.status as ReviewFinding["status"],
+    linkedWorkItemId: (r.linked_work_item_id as string | null) ?? null,
+    linkedTodoId: (r.linked_todo_id as string | null) ?? null,
+    dismissedReason: (r.dismissed_reason as string | null) ?? null,
+    dismissedBy: (r.dismissed_by as string | null) ?? null,
+    dismissedAt: (r.dismissed_at as number | null) ?? null,
+    createdAt: r.created_at as number,
+    updatedAt: r.updated_at as number,
+    deletedAt: (r.deleted_at as number | null) ?? null,
+    version: r.version as number,
+    createdBy: (r.created_by as string | null) ?? null,
+    updatedBy: (r.updated_by as string | null) ?? null,
   };
 }

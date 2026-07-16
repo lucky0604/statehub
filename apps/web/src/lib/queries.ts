@@ -24,6 +24,7 @@ import {
   tokenService,
   mcpSyncService,
   doneGateService,
+  reviewService,
   type ListWorkItemsFilter,
   type PortfolioHealth,
   type ProjectHealthSummary,
@@ -32,6 +33,10 @@ import {
   type AgentRun,
   type Evidence,
   type Todo,
+  type Review,
+  type ReviewFinding,
+  type ReviewVerdict,
+  type ListReviewsFilter,
   PORTFOLIO_PRIORITY_RANK,
 } from "@statehub/domain";
 import { db } from "./server";
@@ -145,17 +150,53 @@ export async function getDoneGate(
   workspaceId: string,
   featureId: string,
 ): Promise<DoneGateSummary> {
-  const [feature, agentRuns, evidence, todos] = await Promise.all([
+  const [feature, agentRuns, evidence, todos, reviews, findings] = await Promise.all([
     featureService.get(db(), workspaceId, featureId),
     listAgentRunsForFeature(workspaceId, featureId),
     listEvidenceForFeature(workspaceId, featureId),
     listTodosForFeature(workspaceId, featureId),
+    reviewService.listForFeature(db(), workspaceId, featureId, 50),
+    reviewService.listFindingsForFeature(db(), workspaceId, featureId),
   ]);
   if (!feature) {
     throw new Error(`feature not found: ${featureId}`);
   }
-  return doneGateService.summarize({ feature, agentRuns, evidence, todos });
+  return doneGateService.summarize({ feature, agentRuns, evidence, todos, reviews, findings });
 }
+
+/** Reviews across the workspace (or filtered by project/feature/verdict). */
+export async function listReviews(
+  workspaceId: string,
+  filter: ListReviewsFilter = {},
+): Promise<Review[]> {
+  return reviewService.list(db(), workspaceId, filter);
+}
+
+/** Findings across all reviews on a feature — for Feature Detail findings section. */
+export async function listFindingsForFeature(
+  workspaceId: string,
+  featureId: string,
+): Promise<ReviewFinding[]> {
+  return reviewService.listFindingsForFeature(db(), workspaceId, featureId);
+}
+
+/** Findings linked to + targeting a work item — for Work Item Peek. */
+export async function listFindingsForWorkItem(
+  workspaceId: string,
+  workItemId: string,
+): Promise<ReviewFinding[]> {
+  return reviewService.listFindingsForWorkItem(db(), workspaceId, workItemId);
+}
+
+/** Reviews targeting a work item — for Work Item Peek. */
+export async function listReviewsForWorkItem(
+  workspaceId: string,
+  workItemId: string,
+): Promise<Review[]> {
+  return reviewService.list(db(), workspaceId, { workItemId, limit: 20 });
+}
+
+export type { ReviewVerdict };
 
 /** Derived MCP sync status — for the TopBar indicator. */
 export async function getMcpSync(workspaceId: string): Promise<McpSyncSummary> {

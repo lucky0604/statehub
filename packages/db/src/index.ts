@@ -116,6 +116,22 @@ export {
   type IdempotencyRecord,
   type NewIdempotencyRecord,
 } from "./schema/index";
+export {
+  reviews,
+  REVIEW_VERDICTS,
+  type ReviewVerdict,
+  type Review,
+  type NewReview,
+} from "./schema/index";
+export {
+  reviewFindings,
+  FINDING_SEVERITIES,
+  FINDING_STATUSES,
+  type FindingSeverity,
+  type FindingStatus,
+  type ReviewFinding,
+  type NewReviewFinding,
+} from "./schema/index";
 
 // D1 binding accessor (production / wrangler dev)
 export { setD1Binding, getD1, hasD1 } from "./client";

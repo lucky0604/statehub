@@ -37,6 +37,11 @@ export {
   type DbClient,
   type SqlStmt,
   type SqlBindValue,
+  type Review,
+  type ReviewVerdict,
+  type ReviewFinding,
+  type FindingSeverity,
+  type FindingStatus,
 } from "@statehub/db";
 
 // Domain errors
@@ -127,11 +132,23 @@ export {
   type DoneGateService,
   type DoneGateSummary,
   type DoneGateWarning,
+  type DoneGateChecklistItem,
   type DoneGateInput,
   mcpSyncService,
   type McpSyncService,
   type McpSyncState,
   type McpSyncSummary,
+  reviewService,
+  type ReviewService,
+  type ReviewFindingInput,
+  type SubmitReviewInput,
+  type SubmitReviewResult,
+  type TransitionFindingInput,
+  type CreateFollowupFixesInput,
+  type CreateFollowupFixesResult,
+  type CreatedFix,
+  type SkippedFinding,
+  type ListReviewsFilter,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)
@@ -147,4 +164,6 @@ export {
   mapAgentRun,
   mapTodo,
   mapEvidence,
+  mapReview,
+  mapReviewFinding,
 } from "./mappers";

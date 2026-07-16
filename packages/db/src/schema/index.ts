@@ -103,3 +103,19 @@ export {
   type IdempotencyRecord,
   type NewIdempotencyRecord,
 } from "./idempotency";
+export {
+  reviews,
+  REVIEW_VERDICTS,
+  type ReviewVerdict,
+  type Review,
+  type NewReview,
+} from "./reviews";
+export {
+  reviewFindings,
+  FINDING_SEVERITIES,
+  FINDING_STATUSES,
+  type FindingSeverity,
+  type FindingStatus,
+  type ReviewFinding,
+  type NewReviewFinding,
+} from "./review-findings";

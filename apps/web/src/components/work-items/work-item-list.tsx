@@ -205,6 +205,14 @@ export function WorkItemList({
                       {wi.projectIdentifier}-{wi.sequenceId}
                     </td>
                     <td className="max-w-[320px] truncate px-2 text-txt-primary">
+                      {wi.title.startsWith("[review_fix]") ? (
+                        <span
+                          className="mr-1.5 inline-flex items-center rounded-xs bg-warning/15 px-1 py-0.5 align-middle text-[10px] font-medium text-warning"
+                          aria-label="review fix"
+                        >
+                          review_fix
+                        </span>
+                      ) : null}
                       {wi.title}
                     </td>
                     <td className="px-2">

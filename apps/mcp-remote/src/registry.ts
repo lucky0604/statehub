@@ -54,6 +54,16 @@ import {
   updateTodoStatusShape,
   updateTodoStatusDescription,
 } from "./tools/update-todo-status";
+import {
+  submitReview,
+  submitReviewShape,
+  submitReviewDescription,
+} from "./tools/submit-review";
+import {
+  createFollowupTodosFromReview,
+  createFollowupTodosFromReviewShape,
+  createFollowupTodosFromReviewDescription,
+} from "./tools/create-followup-todos-from-review";
 
 /** Per-request authenticated context, captured into tool closures. */
 export interface ToolContext {
@@ -161,6 +171,20 @@ const TOOLS: ToolSpec[] = [
     scope: "write_agent_state",
     shape: updateTodoStatusShape,
     run: (ctx, args) => updateTodoStatus(ctx.db, ctx.workspaceId, ctx.actor, args as never),
+  },
+  {
+    name: "submit_review",
+    description: submitReviewDescription,
+    scope: "write_agent_state",
+    shape: submitReviewShape,
+    run: (ctx, args) => submitReview(ctx.db, ctx.workspaceId, ctx.actor, args as never),
+  },
+  {
+    name: "create_followup_todos_from_review",
+    description: createFollowupTodosFromReviewDescription,
+    scope: "write_agent_state",
+    shape: createFollowupTodosFromReviewShape,
+    run: (ctx, args) => createFollowupTodosFromReview(ctx.db, ctx.workspaceId, ctx.actor, args as never),
   },
 ];
 
