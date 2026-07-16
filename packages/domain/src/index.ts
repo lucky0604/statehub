@@ -119,6 +119,15 @@ export {
   evidenceService,
   type EvidenceService,
   type CreateEvidenceInput,
+  doneGateService,
+  type DoneGateService,
+  type DoneGateSummary,
+  type DoneGateWarning,
+  type DoneGateInput,
+  mcpSyncService,
+  type McpSyncService,
+  type McpSyncState,
+  type McpSyncSummary,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)

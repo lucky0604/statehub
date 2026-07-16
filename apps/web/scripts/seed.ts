@@ -9,7 +9,7 @@
  * workspace/project/feature; re-running adds more work items (sequences
  * increment) rather than failing.
  */
-import { getDb } from "@statehub/db";
+import { getDb } from "@statehub/db/node";
 import {
   SOLO_ACTOR,
   workspaceService,
@@ -17,6 +17,7 @@ import {
   stateService,
   featureService,
   workItemService,
+  agentRunService,
   type WorkItemType,
   type Priority,
 } from "@statehub/domain";
@@ -101,6 +102,28 @@ async function main() {
   }
 
   console.log(`\n✓ Seeded ${created} work items`);
+
+  // P02C: seed one completed agent run with evidence so the Feature Detail
+  // timeline + Done Gate have something to render in e2e + dev.
+  const existingRuns = await agentRunService.listForFeature(db, ws.id, feature.id);
+  if (existingRuns.length === 0) {
+    const run = await agentRunService.start(db, SOLO_ACTOR, ws.id, {
+      projectId: project.id,
+      featureId: feature.id,
+      agent: "opencode",
+      runType: "implement",
+      model: "glm-5.2",
+    });
+    await agentRunService.complete(db, SOLO_ACTOR, ws.id, run.id, {
+      summary: "Wired workspace/project/work-item CRUD with envelope + list UI",
+      filesChanged: ["apps/web/app/api/workspaces/route.ts", "apps/web/src/lib/queries.ts"],
+      commandsRun: ["pnpm typecheck", "pnpm test"],
+      testResult: "all passing",
+    });
+    console.log(`✓ Seeded agent run ${run.id} (completed, with evidence)`);
+  } else {
+    console.log(`• Reusing ${existingRuns.length} agent run(s) on feature`);
+  }
 }
 
 main().catch((e) => {

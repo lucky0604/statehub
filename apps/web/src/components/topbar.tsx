@@ -1,3 +1,5 @@
+import { McpSyncIndicator } from "./mcp-sync/mcp-sync-indicator";
+import { getMcpSync } from "@/lib/queries";
 import { cn } from "../lib/cn";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -5,10 +7,18 @@ import { ThemeToggle } from "./theme-toggle";
  * TopBar — 48px high global header.
  * Source: design system §9.1
  *
- * P00: workspace switcher, breadcrumbs, Cmd+K, MCP sync status, theme toggle,
- * user menu are all placeholders. Real wiring lands P01A+.
+ * P02C: MCP sync indicator is now real (derived from agent_runs + tokens).
+ * Workspace switcher, breadcrumbs, and user menu remain placeholders.
  */
-export function TopBar({ className }: { className?: string }) {
+export async function TopBar({
+  workspaceId,
+  className,
+}: {
+  workspaceId: string | null;
+  className?: string;
+}) {
+  const sync = workspaceId ? await getMcpSync(workspaceId) : null;
+
   return (
     <header
       className={cn(
@@ -38,8 +48,12 @@ export function TopBar({ className }: { className?: string }) {
           ⌘K
         </kbd>
         <span className="text-[12px] text-txt-tertiary">Cmd+K placeholder</span>
-        <span className="ml-2 inline-flex h-2 w-2 rounded-full bg-accent-success" aria-hidden />
-        <span className="text-[12px] text-txt-tertiary">MCP sync placeholder</span>
+        <span className="ml-2" aria-hidden />
+        {sync ? (
+          <McpSyncIndicator summary={sync} />
+        ) : (
+          <span className="text-[12px] text-txt-tertiary">MCP not configured</span>
+        )}
         <ThemeToggle />
         <span className="ml-2 text-[12px] text-txt-tertiary">User menu placeholder</span>
       </div>

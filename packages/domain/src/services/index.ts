@@ -68,3 +68,16 @@ export {
   type EvidenceService,
   type CreateEvidenceInput,
 } from "./evidence";
+export {
+  doneGateService,
+  type DoneGateService,
+  type DoneGateSummary,
+  type DoneGateWarning,
+  type DoneGateInput,
+} from "./done-gate";
+export {
+  mcpSyncService,
+  type McpSyncService,
+  type McpSyncState,
+  type McpSyncSummary,
+} from "./mcp-sync";

@@ -18,9 +18,20 @@ import {
   featureService,
   viewService,
   projectHealthService,
+  agentRunService,
+  evidenceService,
+  todoService,
+  tokenService,
+  mcpSyncService,
+  doneGateService,
   type ListWorkItemsFilter,
   type PortfolioHealth,
   type ProjectHealthSummary,
+  type McpSyncSummary,
+  type DoneGateSummary,
+  type AgentRun,
+  type Evidence,
+  type Todo,
   PORTFOLIO_PRIORITY_RANK,
 } from "@statehub/domain";
 import { db } from "./server";
@@ -98,6 +109,62 @@ export async function getProjectHealth(
   projectId: string,
 ): Promise<ProjectHealthSummary> {
   return projectHealthService.summarize(db(), workspaceId, projectId);
+}
+
+/** Recent agent runs across the workspace — for the right rail. */
+export async function getRecentAgentRuns(workspaceId: string, limit = 3): Promise<AgentRun[]> {
+  return agentRunService.listForWorkspace(db(), workspaceId, limit);
+}
+
+/** All agent runs for a feature — for the Feature Detail timeline. */
+export async function listAgentRunsForFeature(
+  workspaceId: string,
+  featureId: string,
+): Promise<AgentRun[]> {
+  return agentRunService.listForFeature(db(), workspaceId, featureId, 50);
+}
+
+/** Evidence linked to a feature. */
+export async function listEvidenceForFeature(
+  workspaceId: string,
+  featureId: string,
+): Promise<Evidence[]> {
+  return evidenceService.listForFeature(db(), workspaceId, featureId);
+}
+
+/** Todos linked to a feature. */
+export async function listTodosForFeature(
+  workspaceId: string,
+  featureId: string,
+): Promise<Todo[]> {
+  return todoService.listForFeature(db(), workspaceId, featureId);
+}
+
+/** Done Gate v0 summary for a feature — derived, warning-only. */
+export async function getDoneGate(
+  workspaceId: string,
+  featureId: string,
+): Promise<DoneGateSummary> {
+  const [feature, agentRuns, evidence, todos] = await Promise.all([
+    featureService.get(db(), workspaceId, featureId),
+    listAgentRunsForFeature(workspaceId, featureId),
+    listEvidenceForFeature(workspaceId, featureId),
+    listTodosForFeature(workspaceId, featureId),
+  ]);
+  if (!feature) {
+    throw new Error(`feature not found: ${featureId}`);
+  }
+  return doneGateService.summarize({ feature, agentRuns, evidence, todos });
+}
+
+/** Derived MCP sync status — for the TopBar indicator. */
+export async function getMcpSync(workspaceId: string): Promise<McpSyncSummary> {
+  return mcpSyncService.derive(db(), workspaceId);
+}
+
+/** Non-revoked tokens — for the Settings page initial list. */
+export async function listTokens(workspaceId: string) {
+  return tokenService.list(db(), workspaceId);
 }
 
 export { PORTFOLIO_PRIORITY_RANK };

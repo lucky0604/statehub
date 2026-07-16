@@ -1,6 +1,11 @@
 import { cn } from "../lib/cn";
-import { requireWorkspace, getPortfolioHealth } from "@/lib/queries";
+import {
+  requireWorkspace,
+  getPortfolioHealth,
+  getRecentAgentRuns,
+} from "@/lib/queries";
 import Link from "next/link";
+import type { AgentRun } from "@statehub/domain";
 
 /**
  * RightRail — 336px context panel (§9.4).
@@ -14,9 +19,13 @@ import Link from "next/link";
 export async function RightRail({ className }: { className?: string }) {
   let ws;
   let health;
+  let recentRuns: AgentRun[] = [];
   try {
     ws = await requireWorkspace();
-    health = await getPortfolioHealth(ws.id);
+    [health, recentRuns] = await Promise.all([
+      getPortfolioHealth(ws.id),
+      getRecentAgentRuns(ws.id, 3),
+    ]);
   } catch {
     // No workspace yet (fresh install) — render empty placeholders.
     return <RailShell className={className} />;
@@ -83,9 +92,29 @@ export async function RightRail({ className }: { className?: string }) {
 
       <section className="rounded-md border border-border-subtle bg-surface-2 p-3">
         <div className="text-[11px] font-medium uppercase tracking-wide text-txt-tertiary">
-          Recent Evidence
+          Recent Agent Runs
         </div>
-        <div className="mt-1 text-[12px] text-txt-placeholder">lands P02</div>
+        {recentRuns.length === 0 ? (
+          <div className="mt-1.5 text-[12px] text-txt-tertiary italic">
+            No agent runs yet.
+          </div>
+        ) : (
+          <ul className="mt-1.5 space-y-1.5">
+            {recentRuns.map((r) => (
+              <li key={r.id} className="text-[12px]">
+                <Link
+                  href={`/workspaces/${ws!.id}/agent-runs?run=${r.id}`}
+                  className="font-medium text-txt-primary hover:underline"
+                >
+                  {r.summary || `${r.agent} · ${r.id.slice(0, 8)}`}
+                </Link>
+                <div className="text-[10px] text-txt-tertiary">
+                  {new Date(r.startedAt).toLocaleString()} · {r.status}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </RailShell>
   );
