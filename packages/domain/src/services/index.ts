@@ -85,3 +85,16 @@ export {
   type McpSyncState,
   type McpSyncSummary,
 } from "./mcp-sync";
+export {
+  reviewService,
+  type ReviewService,
+  type ReviewFindingInput,
+  type SubmitReviewInput,
+  type SubmitReviewResult,
+  type TransitionFindingInput,
+  type CreateFollowupFixesInput,
+  type CreateFollowupFixesResult,
+  type CreatedFix,
+  type SkippedFinding,
+  type ListReviewsFilter,
+} from "./review";
