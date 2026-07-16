@@ -137,6 +137,25 @@ export {
   type ReviewFinding,
   type NewReviewFinding,
 } from "./schema/index";
+export {
+  aiPmActionCards,
+  ACTION_CARD_STATUSES,
+  type ActionCardStatus,
+  type AiPmActionCard,
+  type NewAiPmActionCard,
+} from "./schema/index";
+export {
+  decisions,
+  DECISION_SOURCES,
+  type DecisionSource,
+  type Decision,
+  type NewDecision,
+} from "./schema/index";
+export {
+  weeklyReviews,
+  type WeeklyReview,
+  type NewWeeklyReview,
+} from "./schema/index";
 
 // D1 binding accessor (production / wrangler dev)
 export { setD1Binding, getD1, hasD1 } from "./client";

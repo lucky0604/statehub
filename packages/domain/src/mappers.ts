@@ -19,6 +19,9 @@ import type {
   Evidence,
   Review,
   ReviewFinding,
+  AiPmActionCard,
+  Decision,
+  WeeklyReview,
 } from "@statehub/db";
 
 type Row = Record<string, unknown>;
@@ -329,5 +332,58 @@ export function mapReviewFinding(r: Row): ReviewFinding {
     version: r.version as number,
     createdBy: (r.created_by as string | null) ?? null,
     updatedBy: (r.updated_by as string | null) ?? null,
+  };
+}
+
+export function mapAiPmActionCard(r: Row): AiPmActionCard {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: (r.project_id as string | null) ?? null,
+    featureId: (r.feature_id as string | null) ?? null,
+    aiPmQueryId: r.ai_pm_query_id as string,
+    actionType: r.action_type as string,
+    title: r.title as string,
+    reason: (r.reason as string | null) ?? null,
+    risk: (r.risk as string | null) ?? null,
+    requiresConfirmation: r.requires_confirmation as number,
+    payloadJson: r.payload_json as string,
+    status: r.status as AiPmActionCard["status"],
+    editCount: r.edit_count as number,
+    appliedAt: (r.applied_at as number | null) ?? null,
+    appliedBy: (r.applied_by as string | null) ?? null,
+    dismissedAt: (r.dismissed_at as number | null) ?? null,
+    dismissedBy: (r.dismissed_by as string | null) ?? null,
+    dismissReason: (r.dismiss_reason as string | null) ?? null,
+    createdAt: r.created_at as number,
+  };
+}
+
+export function mapDecision(r: Row): Decision {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: (r.project_id as string | null) ?? null,
+    featureId: (r.feature_id as string | null) ?? null,
+    decisionText: r.decision_text as string,
+    rationale: (r.rationale as string | null) ?? null,
+    source: r.source as Decision["source"],
+    linkedActionId: (r.linked_action_id as string | null) ?? null,
+    linkedWeeklyReviewId: (r.linked_weekly_review_id as string | null) ?? null,
+    createdAt: r.created_at as number,
+    createdBy: (r.created_by as string | null) ?? null,
+  };
+}
+
+export function mapWeeklyReview(r: Row): WeeklyReview {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: (r.project_id as string | null) ?? null,
+    weekStart: r.week_start as number,
+    weekEnd: r.week_end as number,
+    summaryJson: r.summary_json as string,
+    createdAt: r.created_at as number,
+    createdBy: (r.created_by as string | null) ?? null,
   };
 }

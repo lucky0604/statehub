@@ -20,6 +20,15 @@ export const ERROR_CODES = [
   "transition_not_allowed",
   "external_source_error",
   "internal_error",
+  // P05A: AI PM action-card safety. Used when the user tries to apply a
+  // mark_feature_done action but the Done Gate is currently blocking the
+  // feature. Distinct from `transition_not_allowed` (state-machine) and
+  // `validation_error` (schema) so the UI can surface the gate checklist.
+  "done_gate_blocked",
+  // P05A: AI PM high-risk confirmation. Returned when a high-risk action
+  // (pause/archive/dismiss_high/mark_done/change_priority) is applied
+  // without confirm_high_risk=true. Retryable once the user confirms.
+  "high_risk_confirmation_required",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

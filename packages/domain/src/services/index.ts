@@ -110,3 +110,33 @@ export {
   type IngestLocalEvidenceResult,
   type RepoMatchStatus,
 } from "./local-evidence";
+export {
+  decisionService,
+  type DecisionService,
+  type RecordDecisionInput,
+} from "./decision";
+export {
+  weeklyReviewService,
+  type WeeklyReviewService,
+  type SaveWeeklyReviewInput,
+} from "./weekly-review";
+export {
+  actionCardService,
+  type ActionCardService,
+  type ApplyResult,
+} from "./action-card";
+export {
+  validateActionForApply,
+  DoneGateBlockedError,
+  ACTION_VALIDATORS,
+  type ActionValidator,
+  type ActionValidatorContext,
+} from "./action-validators";
+export {
+  createAiPmService,
+  aiPmService,
+  type AIPmService,
+  type AIPmQueryInput,
+  type AIPmQueryResult,
+  type AIPmServiceOptions,
+} from "./ai-pm";

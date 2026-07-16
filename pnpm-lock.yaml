@@ -159,6 +159,19 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  packages/ai:
+    dependencies:
+      '@statehub/db':
+        specifier: workspace:*
+        version: link:../db
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   packages/config:
     dependencies:
       zod:
@@ -199,6 +212,9 @@ importers:
 
   packages/domain:
     dependencies:
+      '@statehub/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@statehub/db':
         specifier: workspace:*
         version: link:../db

@@ -22,6 +22,7 @@ import type {
   Todo,
   Review,
   ReviewFinding,
+  DbClient,
 } from "@statehub/db";
 
 /** One v0 gate warning. severity guides UI color (warn=amber, info=neutral). */
@@ -425,6 +426,47 @@ export function summarize(input: DoneGateInput): DoneGateSummary {
 
 export interface DoneGateService {
   summarize(input: DoneGateInput): DoneGateSummary;
+  /**
+   * Load all the data the Done Gate needs for a feature and run summarize.
+   * Convenience for callers that don't want to assemble the inputs by hand
+   * (e.g. the action validator for mark_feature_done).
+   */
+  evaluate(
+    db: DbClient,
+    workspaceId: string,
+    featureId: string,
+  ): Promise<DoneGateSummary>;
 }
 
-export const doneGateService: DoneGateService = { summarize };
+// Late imports to avoid a circular dependency: done-gate ← review ← work-item
+// (review imports work-item; work-item does not import done-gate). We do
+// need agent-run / evidence / todo / review / feature at runtime. Inline
+// dynamic imports would also work; static imports here are fine because
+// none of those services import done-gate.
+import { agentRunService } from "./agent-run";
+import { evidenceService } from "./evidence";
+import { todoService } from "./todo";
+import { reviewService } from "./review";
+import { featureService } from "./feature";
+
+export const doneGateService: DoneGateService = {
+  summarize,
+  async evaluate(db, workspaceId, featureId) {
+    const feature = await featureService.get(db, workspaceId, featureId);
+    if (!feature) {
+      throw new Error(`feature not found: ${featureId}`);
+    }
+    const [agentRuns, evidence, todos, reviews] = await Promise.all([
+      agentRunService.listForFeature(db, workspaceId, featureId, 50),
+      evidenceService.listForFeature(db, workspaceId, featureId),
+      todoService.listForFeature(db, workspaceId, featureId),
+      reviewService.listForFeature(db, workspaceId, featureId, 50),
+    ]);
+    const findings: Awaited<ReturnType<typeof reviewService.listFindings>> = [];
+    for (const r of reviews) {
+      const f = await reviewService.listFindings(db, workspaceId, r.id);
+      findings.push(...f);
+    }
+    return summarize({ feature, agentRuns, evidence, todos, reviews, findings });
+  },
+};
