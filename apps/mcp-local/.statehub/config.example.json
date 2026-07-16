@@ -1,0 +1,10 @@
+{
+  "remoteUrl": "http://localhost:3000",
+  "workspaceSlug": "personal",
+  "projectSlug": "kavis",
+  "tokenEnv": "STATEHUB_TOKEN",
+  "repoAliases": [
+    "git@github.com:owner/kavis.git",
+    "https://github.com/owner/kavis"
+  ]
+}
