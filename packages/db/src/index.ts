@@ -26,6 +26,11 @@ export {
   type PortfolioPriority,
 } from "./schema/index";
 export {
+  projectRepoAliases,
+  type ProjectRepoAlias,
+  type NewProjectRepoAlias,
+} from "./schema/index";
+export {
   states,
   STATUS_GROUPS,
   type StatusGroup,

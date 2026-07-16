@@ -7,6 +7,7 @@
 import type {
   Workspace,
   Project,
+  ProjectRepoAlias,
   State,
   Label,
   Feature,
@@ -50,12 +51,24 @@ export function mapProject(r: Row): Project {
     type: (r.type as Project["type"]) ?? null,
     status: (r.status as Project["status"]) ?? "active",
     portfolioPriority: (r.portfolio_priority as Project["portfolioPriority"]) ?? "P1",
+    repoUrl: (r.repo_url as string | null) ?? null,
     createdAt: r.created_at as number,
     updatedAt: r.updated_at as number,
     deletedAt: (r.deleted_at as number | null) ?? null,
     version: r.version as number,
     createdBy: (r.created_by as string | null) ?? null,
     updatedBy: (r.updated_by as string | null) ?? null,
+  };
+}
+
+export function mapProjectRepoAlias(r: Row): ProjectRepoAlias {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: r.project_id as string,
+    aliasUrl: r.alias_url as string,
+    createdAt: r.created_at as number,
+    createdBy: (r.created_by as string | null) ?? null,
   };
 }
 

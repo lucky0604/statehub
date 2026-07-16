@@ -54,6 +54,7 @@ export const projects = sqliteTable(
     portfolioPriority: text("portfolio_priority", { enum: PORTFOLIO_PRIORITIES })
       .notNull()
       .default("P1"),
+    repoUrl: text("repo_url"),
     createdAt: integer("created_at")
       .notNull()
       .default(sql`(unixepoch() * 1000)`),

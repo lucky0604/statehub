@@ -26,6 +26,7 @@ export const PATCH = withEnvelope(async (req, params) => {
     type?: ProjectType | null;
     status?: ProjectStatus;
     portfolioPriority?: PortfolioPriority;
+    repoUrl?: string | null;
   }>(req);
   return projectService.update(db(), getActor(), wid, pid, body);
 });

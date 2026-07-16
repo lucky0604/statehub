@@ -39,6 +39,19 @@ export class ConflictError extends DomainError {
   }
 }
 
+/**
+ * Repo conflict — the repo_remote_url on a local-evidence submission matches
+ * a DIFFERENT project in the same workspace. The local sidecar is configured
+ * against the wrong project. Distinct from `conflict` so agents can surface
+ * "fix your .statehub/config.json" specifically.
+ */
+export class RepoConflictError extends DomainError {
+  constructor(message: string, extra?: Record<string, unknown>) {
+    super("repo_conflict", message, extra);
+    this.name = "RepoConflictError";
+  }
+}
+
 export class ValidationError extends DomainError {
   constructor(message: string, extra?: Record<string, unknown>) {
     super("validation_error", message, extra);

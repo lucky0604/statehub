@@ -20,6 +20,7 @@ function errorStatus(code: ErrorCode): number {
     case "unauthorized":
       return 403;
     case "conflict":
+    case "repo_conflict":
     case "idempotency_conflict":
     case "workspace_mismatch":
     case "transition_not_allowed":

@@ -99,3 +99,14 @@ export {
   type SkippedFinding,
   type ListReviewsFilter,
 } from "./review";
+export {
+  repoAliasService,
+  type RepoAliasService,
+} from "./repo-alias";
+export {
+  localEvidenceService,
+  type LocalEvidenceService,
+  type IngestLocalEvidenceInput,
+  type IngestLocalEvidenceResult,
+  type RepoMatchStatus,
+} from "./local-evidence";
