@@ -72,12 +72,43 @@ function stripSecrets(config: {
   return rest;
 }
 
+/**
+ * Validate the provider-specific config. Each provider has a different
+ * required key:
+ *   - github  → config.repo ("owner/name")
+ *   - plane   → config.workspace_slug
+ *   - linear  → config.team_key
+ *   - markdown → no required config (export-only provider)
+ */
+function validateProviderConfig(
+  provider: IntegrationProvider,
+  config: { repo?: string; workspace_slug?: string; team_key?: string; [key: string]: unknown } | undefined,
+): void {
+  if (!config) throw new ValidationError("config is required");
+  switch (provider) {
+    case "github":
+      if (!config.repo?.trim()) throw new ValidationError("config.repo is required");
+      break;
+    case "plane":
+      if (!config.workspace_slug?.trim()) {
+        throw new ValidationError("config.workspace_slug is required");
+      }
+      break;
+    case "linear":
+      if (!config.team_key?.trim()) {
+        throw new ValidationError("config.team_key is required");
+      }
+      break;
+    case "markdown":
+      // Export-only — no required config.
+      break;
+  }
+}
+
 export const integrationService: IntegrationService = {
   async create(db, actor, workspaceId, input) {
     if (!input.name?.trim()) throw new ValidationError("name is required");
-    if (!input.config?.repo?.trim()) {
-      throw new ValidationError("config.repo is required");
-    }
+    validateProviderConfig(input.provider, input.config);
 
     const id = crypto.randomUUID();
     const configJson = JSON.stringify(input.config);

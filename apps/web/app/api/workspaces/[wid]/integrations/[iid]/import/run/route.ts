@@ -2,11 +2,15 @@
  * POST /api/workspaces/:wid/integrations/:iid/import/run — run an import.
  * Creates work items + external_links + an import_job row.
  *
- * Body: { project_id, state_id, issues: GithubIssue[] }
+ * Dispatches to the right importer based on the integration's provider:
+ * github → githubIssuesImporter, plane → planeIssuesImporter,
+ * linear → linearIssuesImporter.
  *
- * Source: agent_flow/implementation/v1/phases/phase-06-import-integration.md §5.2
+ * Body: { project_id, state_id, issues: any[] }  (shape depends on provider)
+ *
+ * Source: agent_flow/implementation/v1/phases/phase-06-import-integration.md §5
  */
-import { githubIssuesImporter, type GithubIssue } from "@statehub/domain";
+import { resolveImporter } from "@/lib/import-dispatch";
 import { withEnvelope, parseBody, param, required } from "@/lib/api-handler";
 import { db, getActor } from "@/lib/server";
 
@@ -18,9 +22,10 @@ export const POST = withEnvelope(async (req, params) => {
   const body = await parseBody<{
     project_id?: string;
     state_id?: string;
-    issues?: GithubIssue[];
+    issues?: unknown[];
   }>(req);
-  const result = await githubIssuesImporter.run(db(), getActor(), wid, iid, {
+  const { importer } = await resolveImporter(db(), wid, iid);
+  const result = await importer.run(db(), getActor(), wid, iid, {
     projectId: required(body.project_id, "project_id"),
     stateId: required(body.state_id, "state_id"),
     issues: required(body.issues, "issues"),

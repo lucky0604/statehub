@@ -10,10 +10,10 @@ import {
 import { ImportWizard } from "@/components/import/import-wizard";
 
 /**
- * GitHub Issues import page — wizard to map GitHub issues to StateHub
- * work items via a configured GitHub integration.
+ * Import page — wizard to map external issues (GitHub, Plane, or Linear)
+ * to StateHub work items via a configured integration.
  *
- * Source: agent_flow/implementation/v1/phases/phase-06-import-integration.md §5.2
+ * Source: agent_flow/implementation/v1/phases/phase-06-import-integration.md §5
  */
 export default async function ImportPage({
   params,
@@ -26,7 +26,7 @@ export default async function ImportPage({
 
   const [projects, integrations, jobs] = await Promise.all([
     listProjects(wid),
-    listIntegrations(wid, { provider: "github" }),
+    listIntegrations(wid),
     listImportJobsForWorkspace(wid, { limit: 20 }),
   ]);
 
@@ -38,10 +38,11 @@ export default async function ImportPage({
   return (
     <div className="mx-auto flex max-w-[960px] flex-col gap-4 p-4">
       <header className="rounded-md border border-border-subtle bg-surface-1 p-4">
-        <h1 className="text-[18px] font-semibold text-txt-primary">Import from GitHub</h1>
+        <h1 className="text-[18px] font-semibold text-txt-primary">Import issues</h1>
         <p className="mt-0.5 text-[12px] text-txt-secondary">
-          Map GitHub issues to StateHub work items. Re-running the same import
-          is idempotent — issues already linked to a work item are skipped.
+          Map GitHub, Plane, or Linear issues to StateHub work items. Re-running
+          the same import is idempotent — issues already linked to a work item
+          are skipped.
         </p>
       </header>
 

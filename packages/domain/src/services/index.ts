@@ -174,3 +174,13 @@ export {
   listImportJobs,
   getImportJob,
 } from "./github-importer";
+export {
+  planeIssuesImporter,
+  type PlaneIssuesImporter,
+  type PlaneIssue,
+} from "./plane-importer";
+export {
+  linearIssuesImporter,
+  type LinearIssuesImporter,
+  type LinearIssue,
+} from "./linear-importer";

@@ -15,6 +15,8 @@ import type {
   Integration,
   ImportJob,
   GithubIssue,
+  PlaneIssue,
+  LinearIssue,
   ImportPreview,
   ImportRunResult,
 } from "@statehub/domain";
@@ -22,7 +24,10 @@ import { Button } from "@/components/ui/button";
 import { api, ApiError } from "@/lib/api-client";
 
 /**
- * GitHub Issues import wizard.
+ * Issues import wizard — supports any import-capable integration
+ * (github, plane, linear). The server dispatches to the right importer
+ * based on the integration's provider; the wizard just collects the
+ * issue JSON in the provider's shape.
  *
  * Step 1: pick integration + project + state + paste issues JSON
  * Step 2: preview → see toCreate / toSkip / errors
@@ -30,7 +35,7 @@ import { api, ApiError } from "@/lib/api-client";
  *
  * Below the wizard: a history of recent import_jobs.
  *
- * Source: agent_flow/implementation/v1/phases/phase-06-import-integration.md §5.2
+ * Source: agent_flow/implementation/v1/phases/phase-06-import-integration.md §5
  */
 interface Props {
   workspaceId: string;
@@ -40,7 +45,10 @@ interface Props {
   initialJobs: ImportJob[];
 }
 
-const SAMPLE_ISSUES: GithubIssue[] = [
+/** Providers that can import (markdown is export-only). */
+const IMPORT_PROVIDERS = ["github", "plane", "linear"] as const;
+
+const SAMPLE_GITHUB: GithubIssue[] = [
   {
     number: 101,
     title: "Bug: sample issue",
@@ -61,6 +69,71 @@ const SAMPLE_ISSUES: GithubIssue[] = [
   },
 ];
 
+const SAMPLE_PLANE: PlaneIssue[] = [
+  {
+    id: "plane-uuid-101",
+    name: "DEMO-101",
+    description: "Sample Plane issue.",
+    state: "In Progress",
+    priority: "high",
+    project: "Demo",
+    link: "https://plane.example/demo/projects/demo/issues/DEMO-101",
+    labels: ["bug"],
+    assignees: ["alice"],
+  },
+  {
+    id: "plane-uuid-102",
+    name: "DEMO-102",
+    description: "Another sample.",
+    state: "Backlog",
+    priority: "medium",
+    project: "Demo",
+    link: "https://plane.example/demo/projects/demo/issues/DEMO-102",
+    labels: ["feature"],
+  },
+];
+
+const SAMPLE_LINEAR: LinearIssue[] = [
+  {
+    id: "linear-uuid-101",
+    identifier: "DEMO-101",
+    title: "Ship the thing",
+    description: "Sample Linear issue.",
+    state: { name: "In Progress", type: "started" },
+    priority: 1,
+    team: { id: "t1", name: "Demo", key: "DEMO" },
+    project: { id: "p1", name: "Q1" },
+    labels: { nodes: [{ id: "l1", name: "bug" }] },
+    assignee: { name: "alice" },
+    url: "https://linear.example/issue/DEMO-101",
+  },
+  {
+    id: "linear-uuid-102",
+    identifier: "DEMO-102",
+    title: "Another one",
+    description: "Another sample.",
+    state: { name: "Backlog", type: "backlog" },
+    priority: 2,
+    team: { id: "t1", name: "Demo", key: "DEMO" },
+    url: "https://linear.example/issue/DEMO-102",
+  },
+];
+
+function sampleForProvider(provider: string | undefined): unknown[] {
+  if (provider === "plane") return SAMPLE_PLANE;
+  if (provider === "linear") return SAMPLE_LINEAR;
+  return SAMPLE_GITHUB;
+}
+
+/**
+ * Numeric prefix for an issue. GitHub issues carry a numeric `issueNumber`
+ * (rendered as `#101`); Plane/Linear issues use a string identifier in
+ * their title and set `issueNumber` to 0, so we render no prefix.
+ */
+function numPrefix(issueNumber: number): string {
+  return issueNumber > 0 ? `#${issueNumber} ` : "";
+}
+
 export function ImportWizard({
   workspaceId,
   integrations,
@@ -71,15 +144,17 @@ export function ImportWizard({
   const router = useRouter();
   const [, startTransition] = useTransition();
 
-  const githubIntegrations = integrations.filter((i) => i.provider === "github");
+  const importIntegrations = integrations.filter((i) =>
+    (IMPORT_PROVIDERS as readonly string[]).includes(i.provider),
+  );
 
   const [integrationId, setIntegrationId] = useState(
-    githubIntegrations[0]?.id ?? "",
+    importIntegrations[0]?.id ?? "",
   );
   const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const [stateId, setStateId] = useState("");
   const [issuesJson, setIssuesJson] = useState(
-    JSON.stringify(SAMPLE_ISSUES, null, 2),
+    JSON.stringify(sampleForProvider(importIntegrations[0]?.provider), null, 2),
   );
   const [jsonError, setJsonError] = useState<string | null>(null);
 
@@ -91,6 +166,9 @@ export function ImportWizard({
 
   const [jobs, setJobs] = useState<ImportJob[]>(initialJobs);
 
+  const selectedIntegration = importIntegrations.find((i) => i.id === integrationId);
+  const selectedProvider = selectedIntegration?.provider;
+
   // Default stateId to first state of the selected project.
   useEffect(() => {
     if (stateId) return;
@@ -100,7 +178,7 @@ export function ImportWizard({
 
   const projectStates = states.filter((s) => s.projectId === projectId);
 
-  function parsedIssues(): GithubIssue[] | null {
+  function parsedIssues(): unknown[] | null {
     setJsonError(null);
     try {
       const parsed = JSON.parse(issuesJson);
@@ -108,7 +186,7 @@ export function ImportWizard({
         setJsonError("JSON must be an array of issues");
         return null;
       }
-      return parsed as GithubIssue[];
+      return parsed;
     } catch (err) {
       setJsonError(err instanceof Error ? err.message : "Invalid JSON");
       return null;
@@ -175,17 +253,17 @@ export function ImportWizard({
   }
 
   function loadSample() {
-    setIssuesJson(JSON.stringify(SAMPLE_ISSUES, null, 2));
+    setIssuesJson(JSON.stringify(sampleForProvider(selectedProvider), null, 2));
     setJsonError(null);
   }
 
-  const hasNoIntegrations = githubIntegrations.length === 0;
+  const hasNoIntegrations = importIntegrations.length === 0;
 
   return (
     <div className="space-y-4" data-testid="import-wizard">
       {hasNoIntegrations ? (
         <div className="rounded-md border border-warning/40 bg-warning/5 px-4 py-3 text-[12px] text-txt-primary">
-          No GitHub integrations yet.{" "}
+          No import-capable integrations yet (github, plane, or linear).{" "}
           <Link
             href={`/workspaces/${workspaceId}/settings/integrations`}
             className="text-accent-primary hover:underline"
@@ -210,7 +288,7 @@ export function ImportWizard({
         </h2>
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
           <label className="flex flex-col gap-1 text-[11px] text-txt-secondary">
-            GitHub integration
+            Integration
             <select
               value={integrationId}
               onChange={(e) => setIntegrationId(e.target.value)}
@@ -218,9 +296,9 @@ export function ImportWizard({
               className="rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-[12px] text-txt-primary"
               data-testid="import-integration-select"
             >
-              {githubIntegrations.map((i) => (
+              {importIntegrations.map((i) => (
                 <option key={i.id} value={i.id}>
-                  {i.name}
+                  {i.name} ({i.provider})
                 </option>
               ))}
             </select>
@@ -269,7 +347,7 @@ export function ImportWizard({
         <div className="mt-3 flex flex-col gap-1">
           <div className="flex items-center justify-between">
             <label className="text-[11px] text-txt-secondary" htmlFor="issues-json">
-              Issues JSON (paste from GitHub API or export)
+              Issues JSON (paste from {selectedProvider ?? "your provider"} API or export)
             </label>
             <button
               type="button"
@@ -327,13 +405,15 @@ export function ImportWizard({
                 Will be created:
               </div>
               <ul className="mt-1 space-y-1" data-testid="import-preview-create">
-                {preview.toCreate.map((c) => (
+                {preview.toCreate.map((c, idx) => (
                   <li
-                    key={c.issueNumber}
+                    key={`${c.issueNumber}-${idx}`}
                     className="rounded-md border border-border-subtle bg-surface px-2 py-1 text-[12px]"
                     data-testid="import-preview-create-row"
                   >
-                    <span className="font-mono-app text-txt-tertiary">#{c.issueNumber}</span>{" "}
+                    <span className="font-mono-app text-txt-tertiary">
+                      {numPrefix(c.issueNumber)}
+                    </span>
                     <span className="text-txt-primary">{c.workItemTitle}</span>
                     {c.featureName ? (
                       <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-txt-secondary">
@@ -352,12 +432,13 @@ export function ImportWizard({
                 Already linked (will be skipped):
               </div>
               <ul className="mt-1 space-y-1" data-testid="import-preview-skip">
-                {preview.toSkip.map((s) => (
+                {preview.toSkip.map((s, idx) => (
                   <li
-                    key={s.issueNumber}
+                    key={`${s.issueNumber}-${idx}`}
                     className="rounded-md border border-border-subtle bg-surface px-2 py-1 text-[12px] text-txt-tertiary"
                   >
-                    <span className="font-mono-app">#{s.issueNumber}</span> {s.issueTitle}
+                    <span className="font-mono-app">{numPrefix(s.issueNumber)}</span>
+                    {s.issueTitle}
                   </li>
                 ))}
               </ul>
@@ -370,12 +451,12 @@ export function ImportWizard({
                 Errors (will be skipped):
               </div>
               <ul className="mt-1 space-y-1" data-testid="import-preview-errors">
-                {preview.errors.map((e) => (
+                {preview.errors.map((e, idx) => (
                   <li
-                    key={e.issueNumber}
+                    key={`${e.issueNumber}-${idx}`}
                     className="rounded-md border border-danger/30 bg-danger/5 px-2 py-1 text-[12px] text-danger"
                   >
-                    <span className="font-mono-app">#{e.issueNumber}</span> {e.message}
+                    <span className="font-mono-app">{numPrefix(e.issueNumber)}</span> {e.message}
                   </li>
                 ))}
               </ul>
@@ -418,13 +499,13 @@ export function ImportWizard({
 
           {result.created.length > 0 ? (
             <ul className="mt-2 space-y-1" data-testid="import-result-created">
-              {result.created.map((c) => (
+              {result.created.map((c, idx) => (
                 <li
-                  key={c.issueNumber}
+                  key={`${c.issueNumber}-${idx}`}
                   className="flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-2 py-1 text-[12px]"
                 >
                   <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                  <span className="font-mono-app text-txt-tertiary">#{c.issueNumber}</span>
+                  <span className="font-mono-app text-txt-tertiary">{numPrefix(c.issueNumber)}</span>
                   <span className="text-txt-secondary">→ work item {c.workItemId.slice(0, 8)}</span>
                 </li>
               ))}
@@ -433,13 +514,13 @@ export function ImportWizard({
 
           {result.errors.length > 0 ? (
             <ul className="mt-2 space-y-1" data-testid="import-result-errors">
-              {result.errors.map((e) => (
+              {result.errors.map((e, idx) => (
                 <li
-                  key={e.issueNumber}
+                  key={`${e.issueNumber}-${idx}`}
                   className="flex items-center gap-2 rounded-md border border-danger/30 bg-danger/5 px-2 py-1 text-[12px] text-danger"
                 >
                   <XCircle className="h-3.5 w-3.5" />
-                  <span className="font-mono-app">#{e.issueNumber}</span> {e.message}
+                  <span className="font-mono-app">{numPrefix(e.issueNumber)}</span> {e.message}
                 </li>
               ))}
             </ul>

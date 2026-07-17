@@ -459,6 +459,37 @@ async function main() {
       console.log(`• Reusing prior import_job (issue #9001 already linked)`);
     }
   }
+
+  // P06C: seed placeholder Plane + Linear integrations so the integrations
+  // list + import wizard show all three providers on first load. No PAT —
+  // the user adds their own. These are config-only (no prior import_job).
+  const existingPlane = await integrationService.list(db, ws.id, {
+    provider: "plane",
+  });
+  if (existingPlane.length === 0) {
+    await integrationService.create(db, SOLO_ACTOR, ws.id, {
+      provider: "plane",
+      name: "plane/demo",
+      config: { workspace_slug: "demo" },
+    });
+    console.log(`✓ Seeded Plane integration (plane/demo)`);
+  } else {
+    console.log(`• Reusing ${existingPlane.length} Plane integration(s)`);
+  }
+
+  const existingLinear = await integrationService.list(db, ws.id, {
+    provider: "linear",
+  });
+  if (existingLinear.length === 0) {
+    await integrationService.create(db, SOLO_ACTOR, ws.id, {
+      provider: "linear",
+      name: "linear/demo",
+      config: { team_key: "DEMO" },
+    });
+    console.log(`✓ Seeded Linear integration (linear/demo)`);
+  } else {
+    console.log(`• Reusing ${existingLinear.length} Linear integration(s)`);
+  }
 }
 
 main().catch((e) => {

@@ -217,6 +217,12 @@ export {
   type ImportRunItem,
   listImportJobs,
   getImportJob,
+  planeIssuesImporter,
+  type PlaneIssuesImporter,
+  type PlaneIssue,
+  linearIssuesImporter,
+  type LinearIssuesImporter,
+  type LinearIssue,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)
