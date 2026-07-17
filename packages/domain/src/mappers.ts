@@ -23,6 +23,8 @@ import type {
   Decision,
   WeeklyReview,
   ExternalLink,
+  Integration,
+  ImportJob,
 } from "@statehub/db";
 
 type Row = Record<string, unknown>;
@@ -401,6 +403,38 @@ export function mapExternalLink(r: Row): ExternalLink {
     externalUrl: r.external_url as string,
     syncStatus: r.sync_status as ExternalLink["syncStatus"],
     lastSyncedAt: (r.last_synced_at as number | null) ?? null,
+    createdAt: r.created_at as number,
+    createdBy: (r.created_by as string | null) ?? null,
+  };
+}
+
+export function mapIntegration(r: Row): Integration {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    provider: r.provider as Integration["provider"],
+    name: r.name as string,
+    configJson: r.config_json as string,
+    status: r.status as Integration["status"],
+    lastUsedAt: (r.last_used_at as number | null) ?? null,
+    createdAt: r.created_at as number,
+    createdBy: (r.created_by as string | null) ?? null,
+  };
+}
+
+export function mapImportJob(r: Row): ImportJob {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: (r.project_id as string | null) ?? null,
+    integrationId: r.integration_id as string,
+    provider: r.provider as string,
+    status: r.status as ImportJob["status"],
+    summaryJson: (r.summary_json as string | null) ?? null,
+    inputJson: (r.input_json as string | null) ?? null,
+    resultJson: (r.result_json as string | null) ?? null,
+    startedAt: (r.started_at as number | null) ?? null,
+    finishedAt: (r.finished_at as number | null) ?? null,
     createdAt: r.created_at as number,
     createdBy: (r.created_by as string | null) ?? null,
   };

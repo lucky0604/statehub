@@ -27,6 +27,8 @@ import {
   reviewService,
   repoAliasService,
   externalLinkService,
+  integrationService,
+  listImportJobs,
   exportProject,
   type ListWorkItemsFilter,
   type PortfolioHealth,
@@ -41,6 +43,8 @@ import {
   type ReviewVerdict,
   type ListReviewsFilter,
   type ExternalLink,
+  type Integration,
+  type ImportJob,
   type MarkdownExportResult,
   PORTFOLIO_PRIORITY_RANK,
 } from "@statehub/domain";
@@ -232,6 +236,22 @@ export async function getMarkdownExport(
   options?: { projectId?: string; includeReviews?: boolean; includeEvidence?: boolean },
 ): Promise<MarkdownExportResult> {
   return exportProject(db(), workspaceId, options);
+}
+
+/** List integrations — for the integrations settings page + import wizard. */
+export async function listIntegrations(
+  workspaceId: string,
+  filter?: { provider?: "github" | "plane" | "linear" | "markdown" },
+): Promise<Integration[]> {
+  return integrationService.list(db(), workspaceId, filter);
+}
+
+/** List import jobs — for the import jobs history panel. */
+export async function listImportJobsForWorkspace(
+  workspaceId: string,
+  filter?: { integrationId?: string; limit?: number },
+): Promise<ImportJob[]> {
+  return listImportJobs(db(), workspaceId, filter);
 }
 
 export { PORTFOLIO_PRIORITY_RANK };

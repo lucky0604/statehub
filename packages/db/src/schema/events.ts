@@ -141,6 +141,13 @@ export const EVENT_TYPES = [
   "external_link.created",
   "external_link.removed",
   "export.markdown_generated",
+  // P06B: integration + import job lifecycle
+  "integration.created",
+  "integration.updated",
+  "integration.removed",
+  "import_job.started",
+  "import_job.completed",
+  "import_job.failed",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

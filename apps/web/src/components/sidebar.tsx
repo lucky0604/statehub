@@ -15,6 +15,7 @@ import {
   Target,
   Download,
   Link2,
+  GitPullRequestArrow,
 } from "lucide-react";
 
 import { cn } from "../lib/cn";
@@ -67,6 +68,11 @@ export function Sidebar({
       label: "Export",
       icon: Download,
       href: workspaceId ? `/workspaces/${workspaceId}/export` : null,
+    },
+    {
+      label: "Import",
+      icon: GitPullRequestArrow,
+      href: workspaceId ? `/workspaces/${workspaceId}/import` : null,
     },
     {
       label: "Local MCP",

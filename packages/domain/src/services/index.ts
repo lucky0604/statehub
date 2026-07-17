@@ -154,3 +154,23 @@ export {
   type MarkdownExportOptions,
   type MarkdownExportResult,
 } from "./markdown-exporter";
+export {
+  integrationService,
+  type IntegrationService,
+  type CreateIntegrationInput,
+  type UpdateIntegrationInput,
+} from "./integration";
+export {
+  githubIssuesImporter,
+  type GithubIssuesImporter,
+  type GithubIssue,
+  type ImportInput,
+  type ImportPreview,
+  type ImportPreviewItem,
+  type ImportSkipItem,
+  type ImportErrorItem,
+  type ImportRunResult,
+  type ImportRunItem,
+  listImportJobs,
+  getImportJob,
+} from "./github-importer";

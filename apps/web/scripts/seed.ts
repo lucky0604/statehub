@@ -26,6 +26,8 @@ import {
   weeklyReviewService,
   decisionService,
   externalLinkService,
+  integrationService,
+  githubIssuesImporter,
   aiPmActor,
   type WorkItemType,
   type Priority,
@@ -394,6 +396,68 @@ async function main() {
     console.log(`✓ Seeded external link (github_pr #42 on feature)`);
   } else {
     console.log(`• Reusing ${existingLinks.length} external link(s) on feature`);
+  }
+
+  // P06B: seed a GitHub integration + one prior completed import_job so the
+  // integrations settings page + import wizard have history to show.
+  const existingIntegrations = await integrationService.list(db, ws.id, {
+    provider: "github",
+  });
+  let integrationId: string | undefined;
+  if (existingIntegrations.length === 0) {
+    const integration = await integrationService.create(db, SOLO_ACTOR, ws.id, {
+      provider: "github",
+      name: "statehub/core",
+      config: { repo: "statehub/core" },
+    });
+    integrationId = integration.id;
+    console.log(`✓ Seeded GitHub integration (statehub/core)`);
+  } else {
+    integrationId = existingIntegrations[0]!.id;
+    console.log(
+      `• Reusing ${existingIntegrations.length} GitHub integration(s)`,
+    );
+  }
+
+  // Run a one-off import with two sample issues so import_jobs has a row.
+  const todoState = (await stateService.list(db, ws.id, project.id)).find(
+    (s) => s.name === "Todo",
+  );
+  if (todoState && integrationId) {
+    const existingJobs = await githubIssuesImporter.preview(
+      db,
+      ws.id,
+      integrationId,
+      {
+        projectId: project.id,
+        stateId: todoState.id,
+        issues: [
+          {
+            number: 9001,
+            title: "Seed: improve README onboarding section",
+            state: "open",
+            html_url: "https://github.com/statehub/core/issues/9001",
+          },
+        ],
+      },
+    );
+    if (existingJobs.toSkip.length === 0) {
+      await githubIssuesImporter.run(db, SOLO_ACTOR, ws.id, integrationId, {
+        projectId: project.id,
+        stateId: todoState.id,
+        issues: [
+          {
+            number: 9001,
+            title: "Seed: improve README onboarding section",
+            state: "open",
+            html_url: "https://github.com/statehub/core/issues/9001",
+          },
+        ],
+      });
+      console.log(`✓ Seeded prior import_job (issue #9001 → work item)`);
+    } else {
+      console.log(`• Reusing prior import_job (issue #9001 already linked)`);
+    }
   }
 }
 

@@ -51,6 +51,11 @@ export {
   type ExternalLink,
   type ExternalSource,
   type ExternalLinkStatus,
+  type Integration,
+  type IntegrationProvider,
+  type IntegrationStatus,
+  type ImportJob,
+  type ImportJobStatus,
 } from "@statehub/db";
 
 // Domain errors
@@ -196,6 +201,22 @@ export {
   exportProject,
   type MarkdownExportOptions,
   type MarkdownExportResult,
+  integrationService,
+  type IntegrationService,
+  type CreateIntegrationInput,
+  type UpdateIntegrationInput,
+  githubIssuesImporter,
+  type GithubIssuesImporter,
+  type GithubIssue,
+  type ImportInput,
+  type ImportPreview,
+  type ImportPreviewItem,
+  type ImportSkipItem,
+  type ImportErrorItem,
+  type ImportRunResult,
+  type ImportRunItem,
+  listImportJobs,
+  getImportJob,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)
@@ -217,4 +238,7 @@ export {
   mapAiPmActionCard,
   mapDecision,
   mapWeeklyReview,
+  mapExternalLink,
+  mapIntegration,
+  mapImportJob,
 } from "./mappers";
