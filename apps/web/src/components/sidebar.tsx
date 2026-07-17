@@ -11,6 +11,7 @@ import {
   Plug,
   ScanSearch,
   Settings,
+  Sparkles,
   Target,
 } from "lucide-react";
 
@@ -48,6 +49,11 @@ export function Sidebar({
       label: "Reviews",
       icon: ScanSearch,
       href: workspaceId ? `/workspaces/${workspaceId}/reviews` : null,
+    },
+    {
+      label: "AI PM",
+      icon: Sparkles,
+      href: workspaceId ? `/workspaces/${workspaceId}/ai-pm` : null,
     },
     {
       label: "Agent Runs",

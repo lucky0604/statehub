@@ -129,6 +129,14 @@ export const EVENT_TYPES = [
   "finding.status_changed",
   "finding.linked",
   "decision.recorded",
+  // P05A: AI PM action-card lifecycle
+  "ai_pm.query",
+  "ai_pm.action_card_created",
+  "ai_pm.action_applied",
+  "ai_pm.action_dismissed",
+  "ai_pm.action_edited",
+  // P05A: weekly review save
+  "weekly_review.saved",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

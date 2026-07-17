@@ -22,6 +22,10 @@ import {
   todoService,
   reviewService,
   evidenceService,
+  actionCardService,
+  weeklyReviewService,
+  decisionService,
+  aiPmActor,
   type WorkItemType,
   type Priority,
 } from "@statehub/domain";
@@ -283,6 +287,92 @@ async function main() {
     console.log(`✓ Seeded working_tree local evidence on feature`);
   } else {
     console.log(`• Reusing working_tree local evidence on feature`);
+  }
+
+  // P05C: seed AI PM data — one pending action card, one weekly review,
+  // one decision. Gives the AI PM Dock something to render on first load.
+  const aiActor = aiPmActor("seed");
+
+  const existingCards = await actionCardService.list(db, ws.id, {
+    status: "pending",
+    featureId: feature.id,
+  });
+  if (existingCards.length === 0) {
+    await actionCardService.create(db, aiActor, ws.id, "seed-query", {
+      type: "create_work_item",
+      title: "Add input validation for feature API",
+      target: { project_id: project.id, feature_id: feature.id },
+      payload: {
+        title: "Validate payload before insert",
+        type: "task",
+        priority: "high",
+      },
+      reason: "AI PM detected missing validation on the feature's API surface.",
+      requires_confirmation: false,
+    });
+    console.log(`✓ Seeded pending action card on feature`);
+  } else {
+    console.log(`• Reusing ${existingCards.length} pending action card(s) on feature`);
+  }
+
+  // Seed a high-risk card so the UI + e2e can exercise the confirmation modal.
+  const existingHighRisk = await actionCardService.list(db, ws.id, {
+    status: "pending",
+  });
+  const hasHighRiskSeed = existingHighRisk.some((c) => c.requiresConfirmation);
+  if (!hasHighRiskSeed) {
+    await actionCardService.create(db, aiActor, ws.id, "seed-query", {
+      type: "change_portfolio_priority",
+      title: "Promote project to P0 priority",
+      target: { project_id: project.id },
+      payload: { project_id: project.id, priority: "P0" },
+      reason: "AI PM detected this project is the active focus but sits at P1.",
+      risk: "P0 priority reshuffles the portfolio — other projects may be deprioritized.",
+      requires_confirmation: true,
+    });
+    console.log(`✓ Seeded high-risk action card (change_portfolio_priority)`);
+  } else {
+    console.log(`• Reusing high-risk action card`);
+  }
+
+  const existingWeeklyReviews = await weeklyReviewService.list(db, ws.id, {
+    projectId: project.id,
+  });
+  if (existingWeeklyReviews.length === 0) {
+    const now = Date.now();
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    await weeklyReviewService.save(db, SOLO_ACTOR, ws.id, {
+      projectId: project.id,
+      weekStart: now - weekMs,
+      weekEnd: now,
+      summaryJson: JSON.stringify({
+        completed: 3,
+        stalled: 1,
+        open_risks: ["Cost overrun on Phase 6"],
+        next_week_focus: ["Finish P05 UI", "Start P06 import"],
+        pause_recommendations: [],
+        missing_evidence: [],
+      }),
+    });
+    console.log(`✓ Seeded weekly review for last week`);
+  } else {
+    console.log(`• Reusing ${existingWeeklyReviews.length} weekly review(s)`);
+  }
+
+  const existingDecisions = await decisionService.list(db, ws.id, {
+    projectId: project.id,
+  });
+  if (existingDecisions.length === 0) {
+    await decisionService.record(db, SOLO_ACTOR, ws.id, {
+      projectId: project.id,
+      featureId: feature.id,
+      decisionText: "We will ship P05 (writable AI PM) before starting P06.",
+      rationale: "P05 unblocks the action-card UX needed by P06 import-preview.",
+      source: "user",
+    });
+    console.log(`✓ Seeded decision on project`);
+  } else {
+    console.log(`• Reusing ${existingDecisions.length} decision(s)`);
   }
 }
 

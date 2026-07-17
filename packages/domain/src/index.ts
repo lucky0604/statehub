@@ -43,6 +43,11 @@ export {
   type ReviewFinding,
   type FindingSeverity,
   type FindingStatus,
+  type AiPmActionCard,
+  type ActionCardStatus,
+  type Decision,
+  type DecisionSource,
+  type WeeklyReview,
 } from "@statehub/db";
 
 // Domain errors
@@ -158,6 +163,30 @@ export {
   type IngestLocalEvidenceInput,
   type IngestLocalEvidenceResult,
   type RepoMatchStatus,
+  decisionService,
+  type DecisionService,
+  type RecordDecisionInput,
+  weeklyReviewService,
+  type WeeklyReviewService,
+  type SaveWeeklyReviewInput,
+  actionCardService,
+  type ActionCardService,
+  type ApplyResult,
+  validateActionForApply,
+  DoneGateBlockedError,
+  HighRiskConfirmationRequiredError,
+  ACTION_VALIDATORS,
+  type ActionValidator,
+  type ActionValidatorContext,
+  createAiPmService,
+  aiPmService,
+  type AIPmService,
+  type AIPmQueryInput,
+  type AIPmQueryResult,
+  type AIPmServiceOptions,
+  type AIPmMode,
+  type AnswerEnvelope,
+  type ContextPacket,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)
@@ -176,4 +205,7 @@ export {
   mapEvidence,
   mapReview,
   mapReviewFinding,
+  mapAiPmActionCard,
+  mapDecision,
+  mapWeeklyReview,
 } from "./mappers";

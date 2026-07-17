@@ -27,6 +27,12 @@ function errorStatus(code: ErrorCode): number {
       return 409;
     case "validation_error":
       return 400;
+    // P05: AI PM safety gates. Semantically "the request was well-formed
+    // but the server refuses to process it until a precondition is met"
+    // — 422 Unprocessable Entity, distinct from 400 (malformed request).
+    case "done_gate_blocked":
+    case "high_risk_confirmation_required":
+      return 422;
     case "rate_limited":
       return 429;
     case "external_source_error":

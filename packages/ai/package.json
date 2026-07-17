@@ -1,5 +1,5 @@
 {
-  "name": "@statehub/domain",
+  "name": "@statehub/ai",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,16 +7,19 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./services": "./src/services/index.ts",
-    "./actor": "./src/actor.ts"
+    "./action-schema": "./src/action-schema.ts",
+    "./answer-schema": "./src/answer-schema.ts",
+    "./context-builder": "./src/context-builder.ts",
+    "./prompts": "./src/prompts.ts",
+    "./output-parser": "./src/output-parser.ts",
+    "./provider": "./src/provider.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@statehub/ai": "workspace:*",
     "@statehub/db": "workspace:*",
-    "@statehub/shared": "workspace:*"
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
