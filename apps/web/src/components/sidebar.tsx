@@ -13,6 +13,9 @@ import {
   Settings,
   Sparkles,
   Target,
+  Download,
+  Link2,
+  GitPullRequestArrow,
 } from "lucide-react";
 
 import { cn } from "../lib/cn";
@@ -62,9 +65,24 @@ export function Sidebar({
     },
     { label: "Decisions", icon: GitBranch, href: "/" },
     {
+      label: "Export",
+      icon: Download,
+      href: workspaceId ? `/workspaces/${workspaceId}/export` : null,
+    },
+    {
+      label: "Import",
+      icon: GitPullRequestArrow,
+      href: workspaceId ? `/workspaces/${workspaceId}/import` : null,
+    },
+    {
       label: "Local MCP",
       icon: Plug,
       href: workspaceId ? `/workspaces/${workspaceId}/settings/local-mcp` : null,
+    },
+    {
+      label: "Integrations",
+      icon: Link2,
+      href: workspaceId ? `/workspaces/${workspaceId}/settings/integrations` : null,
     },
     {
       label: "Settings",

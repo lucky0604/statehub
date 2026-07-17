@@ -25,6 +25,9 @@ import {
   actionCardService,
   weeklyReviewService,
   decisionService,
+  externalLinkService,
+  integrationService,
+  githubIssuesImporter,
   aiPmActor,
   type WorkItemType,
   type Priority,
@@ -373,6 +376,119 @@ async function main() {
     console.log(`✓ Seeded decision on project`);
   } else {
     console.log(`• Reusing ${existingDecisions.length} decision(s)`);
+  }
+
+  // P06A: seed one external link on the seeded feature — a fake PR URL — so
+  // the integrations page + markdown export have something to render.
+  const existingLinks = await externalLinkService.list(db, ws.id, {
+    entityType: "feature",
+    entityId: feature.id,
+  });
+  if (existingLinks.length === 0) {
+    await externalLinkService.create(db, SOLO_ACTOR, ws.id, {
+      projectId: project.id,
+      entityType: "feature",
+      entityId: feature.id,
+      externalSource: "github_pr",
+      externalId: "42",
+      externalUrl: "https://github.com/statehub/core/pull/42",
+    });
+    console.log(`✓ Seeded external link (github_pr #42 on feature)`);
+  } else {
+    console.log(`• Reusing ${existingLinks.length} external link(s) on feature`);
+  }
+
+  // P06B: seed a GitHub integration + one prior completed import_job so the
+  // integrations settings page + import wizard have history to show.
+  const existingIntegrations = await integrationService.list(db, ws.id, {
+    provider: "github",
+  });
+  let integrationId: string | undefined;
+  if (existingIntegrations.length === 0) {
+    const integration = await integrationService.create(db, SOLO_ACTOR, ws.id, {
+      provider: "github",
+      name: "statehub/core",
+      config: { repo: "statehub/core" },
+    });
+    integrationId = integration.id;
+    console.log(`✓ Seeded GitHub integration (statehub/core)`);
+  } else {
+    integrationId = existingIntegrations[0]!.id;
+    console.log(
+      `• Reusing ${existingIntegrations.length} GitHub integration(s)`,
+    );
+  }
+
+  // Run a one-off import with two sample issues so import_jobs has a row.
+  const todoState = (await stateService.list(db, ws.id, project.id)).find(
+    (s) => s.name === "Todo",
+  );
+  if (todoState && integrationId) {
+    const existingJobs = await githubIssuesImporter.preview(
+      db,
+      ws.id,
+      integrationId,
+      {
+        projectId: project.id,
+        stateId: todoState.id,
+        issues: [
+          {
+            number: 9001,
+            title: "Seed: improve README onboarding section",
+            state: "open",
+            html_url: "https://github.com/statehub/core/issues/9001",
+          },
+        ],
+      },
+    );
+    if (existingJobs.toSkip.length === 0) {
+      await githubIssuesImporter.run(db, SOLO_ACTOR, ws.id, integrationId, {
+        projectId: project.id,
+        stateId: todoState.id,
+        issues: [
+          {
+            number: 9001,
+            title: "Seed: improve README onboarding section",
+            state: "open",
+            html_url: "https://github.com/statehub/core/issues/9001",
+          },
+        ],
+      });
+      console.log(`✓ Seeded prior import_job (issue #9001 → work item)`);
+    } else {
+      console.log(`• Reusing prior import_job (issue #9001 already linked)`);
+    }
+  }
+
+  // P06C: seed placeholder Plane + Linear integrations so the integrations
+  // list + import wizard show all three providers on first load. No PAT —
+  // the user adds their own. These are config-only (no prior import_job).
+  const existingPlane = await integrationService.list(db, ws.id, {
+    provider: "plane",
+  });
+  if (existingPlane.length === 0) {
+    await integrationService.create(db, SOLO_ACTOR, ws.id, {
+      provider: "plane",
+      name: "plane/demo",
+      config: { workspace_slug: "demo" },
+    });
+    console.log(`✓ Seeded Plane integration (plane/demo)`);
+  } else {
+    console.log(`• Reusing ${existingPlane.length} Plane integration(s)`);
+  }
+
+  const existingLinear = await integrationService.list(db, ws.id, {
+    provider: "linear",
+  });
+  if (existingLinear.length === 0) {
+    await integrationService.create(db, SOLO_ACTOR, ws.id, {
+      provider: "linear",
+      name: "linear/demo",
+      config: { team_key: "DEMO" },
+    });
+    console.log(`✓ Seeded Linear integration (linear/demo)`);
+  } else {
+    console.log(`• Reusing ${existingLinear.length} Linear integration(s)`);
   }
 }
 

@@ -156,6 +156,29 @@ export {
   type WeeklyReview,
   type NewWeeklyReview,
 } from "./schema/index";
+export {
+  externalLinks,
+  EXTERNAL_SOURCES,
+  EXTERNAL_LINK_STATUSES,
+  type ExternalSource,
+  type ExternalLinkStatus,
+  type ExternalLink,
+  type NewExternalLink,
+} from "./schema/index";
+export {
+  integrations,
+  importJobs,
+  INTEGRATION_PROVIDERS,
+  INTEGRATION_STATUSES,
+  IMPORT_JOB_STATUSES,
+  type IntegrationProvider,
+  type IntegrationStatus,
+  type ImportJobStatus,
+  type Integration,
+  type NewIntegration,
+  type ImportJob,
+  type NewImportJob,
+} from "./schema/index";
 
 // D1 binding accessor (production / wrangler dev)
 export { setD1Binding, getD1, hasD1 } from "./client";

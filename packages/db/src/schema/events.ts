@@ -137,6 +137,17 @@ export const EVENT_TYPES = [
   "ai_pm.action_edited",
   // P05A: weekly review save
   "weekly_review.saved",
+  // P06A: external link lifecycle + markdown export
+  "external_link.created",
+  "external_link.removed",
+  "export.markdown_generated",
+  // P06B: integration + import job lifecycle
+  "integration.created",
+  "integration.updated",
+  "integration.removed",
+  "import_job.started",
+  "import_job.completed",
+  "import_job.failed",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

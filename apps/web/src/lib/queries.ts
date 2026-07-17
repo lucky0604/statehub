@@ -26,6 +26,10 @@ import {
   doneGateService,
   reviewService,
   repoAliasService,
+  externalLinkService,
+  integrationService,
+  listImportJobs,
+  exportProject,
   type ListWorkItemsFilter,
   type PortfolioHealth,
   type ProjectHealthSummary,
@@ -38,6 +42,10 @@ import {
   type ReviewFinding,
   type ReviewVerdict,
   type ListReviewsFilter,
+  type ExternalLink,
+  type Integration,
+  type ImportJob,
+  type MarkdownExportResult,
   PORTFOLIO_PRIORITY_RANK,
 } from "@statehub/domain";
 import { db } from "./server";
@@ -212,6 +220,38 @@ export async function getMcpSync(workspaceId: string): Promise<McpSyncSummary> {
 /** Non-revoked tokens — for the Settings page initial list. */
 export async function listTokens(workspaceId: string) {
   return tokenService.list(db(), workspaceId);
+}
+
+/** External links for an entity — used by feature detail + integrations page. */
+export async function listExternalLinks(
+  workspaceId: string,
+  filter?: { entityType?: string; entityId?: string; projectId?: string },
+): Promise<ExternalLink[]> {
+  return externalLinkService.list(db(), workspaceId, filter);
+}
+
+/** Generate a markdown export — for the /export page. */
+export async function getMarkdownExport(
+  workspaceId: string,
+  options?: { projectId?: string; includeReviews?: boolean; includeEvidence?: boolean },
+): Promise<MarkdownExportResult> {
+  return exportProject(db(), workspaceId, options);
+}
+
+/** List integrations — for the integrations settings page + import wizard. */
+export async function listIntegrations(
+  workspaceId: string,
+  filter?: { provider?: "github" | "plane" | "linear" | "markdown" },
+): Promise<Integration[]> {
+  return integrationService.list(db(), workspaceId, filter);
+}
+
+/** List import jobs — for the import jobs history panel. */
+export async function listImportJobsForWorkspace(
+  workspaceId: string,
+  filter?: { integrationId?: string; limit?: number },
+): Promise<ImportJob[]> {
+  return listImportJobs(db(), workspaceId, filter);
 }
 
 export { PORTFOLIO_PRIORITY_RANK };

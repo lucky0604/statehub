@@ -144,3 +144,43 @@ export {
   type AnswerEnvelope,
   type ContextPacket,
 } from "./ai-pm";
+export {
+  externalLinkService,
+  type ExternalLinkService,
+  type CreateExternalLinkInput,
+} from "./external-link";
+export {
+  exportProject,
+  type MarkdownExportOptions,
+  type MarkdownExportResult,
+} from "./markdown-exporter";
+export {
+  integrationService,
+  type IntegrationService,
+  type CreateIntegrationInput,
+  type UpdateIntegrationInput,
+} from "./integration";
+export {
+  githubIssuesImporter,
+  type GithubIssuesImporter,
+  type GithubIssue,
+  type ImportInput,
+  type ImportPreview,
+  type ImportPreviewItem,
+  type ImportSkipItem,
+  type ImportErrorItem,
+  type ImportRunResult,
+  type ImportRunItem,
+  listImportJobs,
+  getImportJob,
+} from "./github-importer";
+export {
+  planeIssuesImporter,
+  type PlaneIssuesImporter,
+  type PlaneIssue,
+} from "./plane-importer";
+export {
+  linearIssuesImporter,
+  type LinearIssuesImporter,
+  type LinearIssue,
+} from "./linear-importer";
