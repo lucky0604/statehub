@@ -53,6 +53,19 @@ export class DoneGateBlockedError extends DomainError {
   }
 }
 
+/**
+ * Specialized error for the high-risk confirmation gate. Distinct from
+ * ValidationError so the API route can map it to
+ * error_code=high_risk_confirmation_required (422) and the UI can show a
+ * confirmation modal rather than a generic validation error.
+ */
+export class HighRiskConfirmationRequiredError extends DomainError {
+  constructor(message: string, extra?: Record<string, unknown>) {
+    super("high_risk_confirmation_required", message, extra);
+    this.name = "HighRiskConfirmationRequiredError";
+  }
+}
+
 export interface ActionValidatorContext {
   db: DbClient;
   workspaceId: string;

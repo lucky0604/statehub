@@ -128,6 +128,7 @@ export {
 export {
   validateActionForApply,
   DoneGateBlockedError,
+  HighRiskConfirmationRequiredError,
   ACTION_VALIDATORS,
   type ActionValidator,
   type ActionValidatorContext,
@@ -139,4 +140,5 @@ export {
   type AIPmQueryInput,
   type AIPmQueryResult,
   type AIPmServiceOptions,
+  type AIPmMode,
 } from "./ai-pm";

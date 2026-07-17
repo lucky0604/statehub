@@ -23,6 +23,7 @@ import {
   type AnswerEnvelope,
   type ContextPacket,
 } from "@statehub/ai";
+export type { AIPmMode };
 import { aiPmActor } from "../actor";
 import { actionCardService } from "./action-card";
 import { projectService } from "./project";

@@ -49,7 +49,7 @@ import {
 } from "@statehub/ai";
 import { mapAiPmActionCard } from "../mappers";
 import { NotFoundError, ValidationError, ConflictError } from "../errors";
-import { validateActionForApply } from "./action-validators";
+import { validateActionForApply, HighRiskConfirmationRequiredError } from "./action-validators";
 import { featureService } from "./feature";
 import { workItemService } from "./work-item";
 import { projectService } from "./project";
@@ -215,8 +215,8 @@ export const actionCardService: ActionCardService = {
     // High-risk confirmation gate.
     if (isHighRiskActionType(card.actionType)) {
       if (!options?.confirmHighRisk) {
-        throw new ValidationError(
-          "high_risk_confirmation_required",
+        throw new HighRiskConfirmationRequiredError(
+          `action ${card.actionType} is high-risk; confirm_high_risk=true required to apply`,
           { actionId, actionType: card.actionType },
         );
       }

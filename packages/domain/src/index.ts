@@ -174,6 +174,7 @@ export {
   type ApplyResult,
   validateActionForApply,
   DoneGateBlockedError,
+  HighRiskConfirmationRequiredError,
   ACTION_VALIDATORS,
   type ActionValidator,
   type ActionValidatorContext,
@@ -183,6 +184,7 @@ export {
   type AIPmQueryInput,
   type AIPmQueryResult,
   type AIPmServiceOptions,
+  type AIPmMode,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)

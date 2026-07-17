@@ -31,6 +31,7 @@ import {
   actionCardService,
   createAiPmService,
   DoneGateBlockedError,
+  HighRiskConfirmationRequiredError,
   ValidationError,
   ConflictError,
   NotFoundError,
@@ -283,7 +284,7 @@ describe("P05A actionCardService", () => {
     );
     await expect(
       actionCardService.apply(db, SOLO_ACTOR, wsId, card.id),
-    ).rejects.toThrow(ValidationError);
+    ).rejects.toThrow(HighRiskConfirmationRequiredError);
   });
 
   it("dismisses a normal card without a reason", async () => {
