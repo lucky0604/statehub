@@ -9,6 +9,7 @@ import {
   listTodosForFeature,
   getDoneGate,
   listFindingsForFeature,
+  listExternalLinks,
 } from "@/lib/queries";
 import { workItemService, type WorkItem } from "@statehub/domain";
 import { db } from "@/lib/server";
@@ -18,6 +19,7 @@ import { TodoChecklist } from "@/components/todos/todo-checklist";
 import { DoneGateWarning } from "@/components/done-gate/done-gate-warning";
 import { DoneGateChecklist } from "@/components/done-gate/done-gate-checklist";
 import { FeatureFindings } from "@/components/reviews/feature-findings";
+import { FeatureExternalLinks } from "@/components/external-links/feature-external-links";
 import { FeatureStatusButton } from "./feature-status-button";
 
 /**
@@ -50,12 +52,13 @@ export default async function FeatureDetailPage({
   const feature = features.find((f) => f.id === fid);
   if (!feature) notFound();
 
-  const [runs, evidence, todos, gate, findings] = await Promise.all([
+  const [runs, evidence, todos, gate, findings, externalLinks] = await Promise.all([
     listAgentRunsForFeature(wid, fid),
     listEvidenceForFeature(wid, fid),
     listTodosForFeature(wid, fid),
     getDoneGate(wid, fid),
     listFindingsForFeature(wid, fid),
+    listExternalLinks(wid, { entityType: "feature", entityId: fid }),
   ]);
 
   // Resolve linked work items for the findings (so the FindingCard can show
@@ -118,6 +121,14 @@ export default async function FeatureDetailPage({
           projectId={pid}
           findings={findings}
           workItemById={workItemById}
+        />
+
+        {/* External links section (P06A) */}
+        <FeatureExternalLinks
+          workspaceId={wid}
+          projectId={pid}
+          featureId={fid}
+          initialLinks={externalLinks}
         />
 
         {/* Two-column layout: timeline + (evidence + todos) */}

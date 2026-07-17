@@ -144,3 +144,13 @@ export {
   type AnswerEnvelope,
   type ContextPacket,
 } from "./ai-pm";
+export {
+  externalLinkService,
+  type ExternalLinkService,
+  type CreateExternalLinkInput,
+} from "./external-link";
+export {
+  exportProject,
+  type MarkdownExportOptions,
+  type MarkdownExportResult,
+} from "./markdown-exporter";

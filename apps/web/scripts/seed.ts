@@ -25,6 +25,7 @@ import {
   actionCardService,
   weeklyReviewService,
   decisionService,
+  externalLinkService,
   aiPmActor,
   type WorkItemType,
   type Priority,
@@ -373,6 +374,26 @@ async function main() {
     console.log(`✓ Seeded decision on project`);
   } else {
     console.log(`• Reusing ${existingDecisions.length} decision(s)`);
+  }
+
+  // P06A: seed one external link on the seeded feature — a fake PR URL — so
+  // the integrations page + markdown export have something to render.
+  const existingLinks = await externalLinkService.list(db, ws.id, {
+    entityType: "feature",
+    entityId: feature.id,
+  });
+  if (existingLinks.length === 0) {
+    await externalLinkService.create(db, SOLO_ACTOR, ws.id, {
+      projectId: project.id,
+      entityType: "feature",
+      entityId: feature.id,
+      externalSource: "github_pr",
+      externalId: "42",
+      externalUrl: "https://github.com/statehub/core/pull/42",
+    });
+    console.log(`✓ Seeded external link (github_pr #42 on feature)`);
+  } else {
+    console.log(`• Reusing ${existingLinks.length} external link(s) on feature`);
   }
 }
 

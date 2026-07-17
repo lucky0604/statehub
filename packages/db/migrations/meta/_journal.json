@@ -57,6 +57,13 @@
       "when": 1784211684179,
       "tag": "0007_amused_quasimodo",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1784252576705,
+      "tag": "0008_odd_lightspeed",
+      "breakpoints": true
     }
   ]
 }

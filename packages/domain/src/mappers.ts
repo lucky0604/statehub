@@ -22,6 +22,7 @@ import type {
   AiPmActionCard,
   Decision,
   WeeklyReview,
+  ExternalLink,
 } from "@statehub/db";
 
 type Row = Record<string, unknown>;
@@ -383,6 +384,23 @@ export function mapWeeklyReview(r: Row): WeeklyReview {
     weekStart: r.week_start as number,
     weekEnd: r.week_end as number,
     summaryJson: r.summary_json as string,
+    createdAt: r.created_at as number,
+    createdBy: (r.created_by as string | null) ?? null,
+  };
+}
+
+export function mapExternalLink(r: Row): ExternalLink {
+  return {
+    id: r.id as string,
+    workspaceId: r.workspace_id as string,
+    projectId: (r.project_id as string | null) ?? null,
+    entityType: r.entity_type as string,
+    entityId: r.entity_id as string,
+    externalSource: r.external_source as ExternalLink["externalSource"],
+    externalId: r.external_id as string,
+    externalUrl: r.external_url as string,
+    syncStatus: r.sync_status as ExternalLink["syncStatus"],
+    lastSyncedAt: (r.last_synced_at as number | null) ?? null,
     createdAt: r.created_at as number,
     createdBy: (r.created_by as string | null) ?? null,
   };

@@ -48,6 +48,9 @@ export {
   type Decision,
   type DecisionSource,
   type WeeklyReview,
+  type ExternalLink,
+  type ExternalSource,
+  type ExternalLinkStatus,
 } from "@statehub/db";
 
 // Domain errors
@@ -187,6 +190,12 @@ export {
   type AIPmMode,
   type AnswerEnvelope,
   type ContextPacket,
+  externalLinkService,
+  type ExternalLinkService,
+  type CreateExternalLinkInput,
+  exportProject,
+  type MarkdownExportOptions,
+  type MarkdownExportResult,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)

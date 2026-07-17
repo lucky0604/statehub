@@ -26,6 +26,8 @@ import {
   doneGateService,
   reviewService,
   repoAliasService,
+  externalLinkService,
+  exportProject,
   type ListWorkItemsFilter,
   type PortfolioHealth,
   type ProjectHealthSummary,
@@ -38,6 +40,8 @@ import {
   type ReviewFinding,
   type ReviewVerdict,
   type ListReviewsFilter,
+  type ExternalLink,
+  type MarkdownExportResult,
   PORTFOLIO_PRIORITY_RANK,
 } from "@statehub/domain";
 import { db } from "./server";
@@ -212,6 +216,22 @@ export async function getMcpSync(workspaceId: string): Promise<McpSyncSummary> {
 /** Non-revoked tokens — for the Settings page initial list. */
 export async function listTokens(workspaceId: string) {
   return tokenService.list(db(), workspaceId);
+}
+
+/** External links for an entity — used by feature detail + integrations page. */
+export async function listExternalLinks(
+  workspaceId: string,
+  filter?: { entityType?: string; entityId?: string; projectId?: string },
+): Promise<ExternalLink[]> {
+  return externalLinkService.list(db(), workspaceId, filter);
+}
+
+/** Generate a markdown export — for the /export page. */
+export async function getMarkdownExport(
+  workspaceId: string,
+  options?: { projectId?: string; includeReviews?: boolean; includeEvidence?: boolean },
+): Promise<MarkdownExportResult> {
+  return exportProject(db(), workspaceId, options);
 }
 
 export { PORTFOLIO_PRIORITY_RANK };

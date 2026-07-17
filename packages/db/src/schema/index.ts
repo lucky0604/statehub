@@ -143,3 +143,12 @@ export {
   type WeeklyReview,
   type NewWeeklyReview,
 } from "./weekly-reviews";
+export {
+  externalLinks,
+  EXTERNAL_SOURCES,
+  EXTERNAL_LINK_STATUSES,
+  type ExternalSource,
+  type ExternalLinkStatus,
+  type ExternalLink,
+  type NewExternalLink,
+} from "./external-links";
