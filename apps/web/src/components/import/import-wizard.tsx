@@ -10,6 +10,7 @@ import {
   XCircle,
   Loader2,
   History,
+  DownloadCloud,
 } from "lucide-react";
 import type {
   Integration,
@@ -162,6 +163,8 @@ export function ImportWizard({
   const [previewing, setPreviewing] = useState(false);
   const [result, setResult] = useState<ImportRunResult | null>(null);
   const [running, setRunning] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [fetchNote, setFetchNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [jobs, setJobs] = useState<ImportJob[]>(initialJobs);
@@ -257,6 +260,41 @@ export function ImportWizard({
     setJsonError(null);
   }
 
+  async function fetchFromProvider() {
+    if (!integrationId) {
+      setError("Pick an integration first.");
+      return;
+    }
+    setFetching(true);
+    setError(null);
+    setFetchNote(null);
+    try {
+      const res = await api.post<{
+        issues: unknown[];
+        has_more: boolean;
+        pages_fetched: number;
+      }>(`/api/workspaces/${workspaceId}/integrations/${integrationId}/fetch`, {});
+      setIssuesJson(JSON.stringify(res.issues, null, 2));
+      setJsonError(null);
+      if (res.has_more) {
+        setFetchNote(
+          `Fetched ${res.issues.length} issues (more available — raise the cap or refine in ${selectedProvider ?? "your provider"}).`,
+        );
+      } else if (res.issues.length === 0) {
+        setFetchNote(`No open issues found at ${selectedProvider ?? "provider"}.`);
+      } else {
+        setFetchNote(
+          `Fetched ${res.issues.length} issue(s) from ${selectedProvider ?? "provider"} (${res.pages_fetched} page(s)).`,
+        );
+      }
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Fetch failed";
+      setError(msg);
+    } finally {
+      setFetching(false);
+    }
+  }
+
   const hasNoIntegrations = importIntegrations.length === 0;
 
   return (
@@ -349,14 +387,35 @@ export function ImportWizard({
             <label className="text-[11px] text-txt-secondary" htmlFor="issues-json">
               Issues JSON (paste from {selectedProvider ?? "your provider"} API or export)
             </label>
-            <button
-              type="button"
-              onClick={loadSample}
-              className="text-[11px] text-accent-primary hover:underline"
-              data-testid="import-load-sample"
-            >
-              Load sample
-            </button>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={loadSample}
+                className="text-[11px] text-accent-primary hover:underline"
+                data-testid="import-load-sample"
+              >
+                Load sample
+              </button>
+              <button
+                type="button"
+                onClick={() => void fetchFromProvider()}
+                disabled={fetching || !integrationId}
+                className="flex items-center gap-1 text-[11px] text-accent-primary hover:underline disabled:opacity-50"
+                data-testid="import-fetch-btn"
+                title={
+                  selectedProvider === "github"
+                    ? "Pull live issues from GitHub"
+                    : `Live fetch for ${selectedProvider ?? "this provider"} lands in P07B`
+                }
+              >
+                {fetching ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <DownloadCloud className="h-3 w-3" />
+                )}
+                Fetch from provider
+              </button>
+            </div>
           </div>
           <textarea
             id="issues-json"
@@ -367,6 +426,14 @@ export function ImportWizard({
             className="rounded-md border border-border-subtle bg-surface px-2 py-1.5 font-mono-app text-[11px] text-txt-primary"
             data-testid="import-issues-json"
           />
+          {fetchNote ? (
+            <span
+              className="text-[11px] text-txt-tertiary"
+              data-testid="import-fetch-note"
+            >
+              {fetchNote}
+            </span>
+          ) : null}
           {jsonError ? (
             <span className="text-[11px] text-danger">JSON error: {jsonError}</span>
           ) : null}
