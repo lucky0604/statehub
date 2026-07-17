@@ -31,7 +31,10 @@ export const POST = withEnvelope(async (req, params) => {
     actionId,
     {
       editedPayload: body.edited_payload,
-      confirmHighRisk: body.confirm_high_risk === true,
+      // Accept truthy values (true, 1) — the AiPmActionCard schema stores
+      // requires_confirmation as an integer (0/1), so the client may send
+      // a number rather than a strict boolean.
+      confirmHighRisk: !!body.confirm_high_risk,
     },
   );
   return {

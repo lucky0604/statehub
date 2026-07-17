@@ -1,6 +1,6 @@
 # StateHub
 
-AI-native project manager for solo builders. Turns coding agent work into structured project state: features, work items, todos, agent runs, reviews, evidence, decisions.
+AI-native project manager for solo builders. Turns coding agent work into structured project state: features, work items, todos, agent runs, reviews, evidence, decisions, plus a writable AI PM that proposes confirmation-gated action cards.
 
 This repo is at **P00 (Foundation)**. See `agent_flow/implementation/v1/iterations/20260709-p00-foundation-bootstrap/plan.md` for scope.
 
@@ -49,6 +49,8 @@ packages/
   db/                 Drizzle schema, migrations, D1 client
   shared/             API envelope, URL state helpers, error codes
   config/             Env validation
+  ai/                 AI PM: zod action schema, context builder, providers
+  domain/             Domain services (work-item, review, done-gate, ai-pm, …)
   ui/                 (reserved for shared UI primitives)
 ```
 

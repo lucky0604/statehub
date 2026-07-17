@@ -141,4 +141,6 @@ export {
   type AIPmQueryResult,
   type AIPmServiceOptions,
   type AIPmMode,
+  type AnswerEnvelope,
+  type ContextPacket,
 } from "./ai-pm";

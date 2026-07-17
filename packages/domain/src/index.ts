@@ -185,6 +185,8 @@ export {
   type AIPmQueryResult,
   type AIPmServiceOptions,
   type AIPmMode,
+  type AnswerEnvelope,
+  type ContextPacket,
 } from "./services";
 
 // Row mappers (for raw row -> typed object conversion in API routes)
