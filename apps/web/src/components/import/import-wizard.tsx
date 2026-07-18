@@ -273,18 +273,22 @@ export function ImportWizard({
         issues: unknown[];
         has_more: boolean;
         pages_fetched: number;
+        since_used: string | null;
       }>(`/api/workspaces/${workspaceId}/integrations/${integrationId}/fetch`, {});
       setIssuesJson(JSON.stringify(res.issues, null, 2));
       setJsonError(null);
+      const fetchMode = res.since_used
+        ? `Incremental fetch since ${formatFetchDate(res.since_used)}`
+        : "Full fetch (first time)";
       if (res.has_more) {
         setFetchNote(
-          `Fetched ${res.issues.length} issues (more available — raise the cap or refine in ${selectedProvider ?? "your provider"}).`,
+          `${fetchMode}. Fetched ${res.issues.length} issues (more available — raise the cap or refine in ${selectedProvider ?? "your provider"}).`,
         );
       } else if (res.issues.length === 0) {
-        setFetchNote(`No open issues found at ${selectedProvider ?? "provider"}.`);
+        setFetchNote(`${fetchMode}. No open issues found at ${selectedProvider ?? "provider"}.`);
       } else {
         setFetchNote(
-          `Fetched ${res.issues.length} issue(s) from ${selectedProvider ?? "provider"} (${res.pages_fetched} page(s)).`,
+          `${fetchMode}. ${res.issues.length} issue(s) from ${selectedProvider ?? "provider"} (${res.pages_fetched} page(s)).`,
         );
       }
     } catch (err) {
@@ -292,6 +296,17 @@ export function ImportWizard({
       setError(msg);
     } finally {
       setFetching(false);
+    }
+  }
+
+  function formatFetchDate(iso: string): string {
+    try {
+      return new Date(iso).toLocaleString(undefined, {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+    } catch {
+      return iso;
     }
   }
 
@@ -413,6 +428,22 @@ export function ImportWizard({
               </button>
             </div>
           </div>
+          {selectedIntegration?.lastUsedAt ? (
+            <span
+              className="text-[10px] text-txt-tertiary"
+              data-testid="import-fetch-mode-hint"
+            >
+              Next fetch: incremental since{" "}
+              {formatFetchDate(new Date(selectedIntegration.lastUsedAt - 5_000).toISOString())}
+            </span>
+          ) : integrationId ? (
+            <span
+              className="text-[10px] text-txt-tertiary"
+              data-testid="import-fetch-mode-hint"
+            >
+              Next fetch: full (first time)
+            </span>
+          ) : null}
           <textarea
             id="issues-json"
             value={issuesJson}

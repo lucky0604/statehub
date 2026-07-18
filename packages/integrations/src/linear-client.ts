@@ -76,9 +76,9 @@ const HARD_PAGE_CAP = 20;
 const PAGE_SIZE = 50;
 
 const ISSUES_QUERY = `
-query FetchIssues($teamKey: String!, $first: Int!, $after: String) {
+query FetchIssues($teamKey: String!, $first: Int!, $after: String, $since: DateTime) {
   team(key: $teamKey) {
-    issues(first: $first, after: $after) {
+    issues(first: $first, after: $after, filter: { updatedAt: { gte: $since } }, orderBy: updatedAt) {
       nodes {
         id
         identifier
@@ -124,7 +124,7 @@ export class LinearClient implements ProviderClient<LinearIssue> {
     let afterCursor: string | null = null;
 
     while (pagesFetched < HARD_PAGE_CAP) {
-      const res = await this.safeFetch(fetchImpl, afterCursor);
+      const res = await this.safeFetch(fetchImpl, afterCursor, opts?.since);
       const body = (await res.json()) as LinearGraphQLResponse;
 
       if (body.errors && body.errors.length > 0) {
@@ -179,6 +179,7 @@ export class LinearClient implements ProviderClient<LinearIssue> {
   private async safeFetch(
     fetchImpl: typeof fetch,
     after: string | null,
+    since?: string,
   ): Promise<Response> {
     let res: Response;
     try {
@@ -195,6 +196,7 @@ export class LinearClient implements ProviderClient<LinearIssue> {
             teamKey: this.teamKey,
             first: PAGE_SIZE,
             after,
+            since: since ?? null,
           },
         }),
       });

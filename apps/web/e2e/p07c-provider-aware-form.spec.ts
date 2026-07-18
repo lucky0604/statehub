@@ -115,7 +115,7 @@ test("create a plane integration via the form, then fetch from it", async ({ pag
     await page.getByTestId("import-fetch-btn").click();
 
     await expect(page.getByTestId("import-issues-json")).toHaveValue(/DEMO-7001/);
-    await expect(page.getByTestId("import-fetch-note")).toContainText(/Fetched/);
+    await expect(page.getByTestId("import-fetch-note")).toContainText(/fetch/i);
   } finally {
     await page.request.delete(`/api/workspaces/${wid}/integrations/${created!.id}`);
   }
@@ -151,7 +151,7 @@ test("create a linear integration via the form, then fetch from it", async ({ pa
     await page.getByTestId("import-fetch-btn").click();
 
     await expect(page.getByTestId("import-issues-json")).toHaveValue(/DEMO-7001/);
-    await expect(page.getByTestId("import-fetch-note")).toContainText(/Fetched/);
+    await expect(page.getByTestId("import-fetch-note")).toContainText(/fetch/i);
   } finally {
     await page.request.delete(`/api/workspaces/${wid}/integrations/${created!.id}`);
   }

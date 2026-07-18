@@ -250,4 +250,25 @@ describe("PlaneClient.listIssues", () => {
     const url = fetchImpl.mock.calls[0]![0] as string;
     expect(url).toContain("https://plane.internal/v1/workspaces/demo/issues/");
   });
+
+  it("appends updated_at__gte when since is provided (P07E)", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(makeResponse(pageBody(1)));
+    const client = new PlaneClient({ workspaceSlug: "demo" });
+    await client.listIssues({
+      fetchImpl,
+      since: "2026-07-01T00:00:00Z",
+    });
+
+    const url = fetchImpl.mock.calls[0]![0] as string;
+    expect(url).toContain("updated_at__gte=2026-07-01T00%3A00%3A00Z");
+  });
+
+  it("does not append updated_at__gte when since is omitted", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(makeResponse(pageBody(1)));
+    const client = new PlaneClient({ workspaceSlug: "demo" });
+    await client.listIssues({ fetchImpl });
+
+    const url = fetchImpl.mock.calls[0]![0] as string;
+    expect(url).not.toContain("updated_at__gte");
+  });
 });
