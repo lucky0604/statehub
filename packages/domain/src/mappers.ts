@@ -26,6 +26,7 @@ import type {
   Integration,
   ImportJob,
 } from "@statehub/db";
+import { SECRET_FIELDS } from "./provider-secrets";
 
 type Row = Record<string, unknown>;
 
@@ -409,12 +410,31 @@ export function mapExternalLink(r: Row): ExternalLink {
 }
 
 export function mapIntegration(r: Row): Integration {
+  const provider = r.provider as Integration["provider"];
+  // Mask secret fields in config_json so GET responses never leak tokens
+  // (encrypted or plaintext). The fetch route bypasses the mapper and
+  // uses integrationService.getDecryptedConfig to recover plaintext.
+  let configJson = r.config_json as string;
+  try {
+    const parsed = JSON.parse(configJson) as Record<string, unknown>;
+    let masked = false;
+    for (const field of SECRET_FIELDS[provider] ?? []) {
+      const v = parsed[field];
+      if (typeof v === "string" && v.length > 0) {
+        parsed[field] = "••••";
+        masked = true;
+      }
+    }
+    if (masked) configJson = JSON.stringify(parsed);
+  } catch {
+    // Corrupt config_json — leave as-is so the fetch route surfaces the error.
+  }
   return {
     id: r.id as string,
     workspaceId: r.workspace_id as string,
-    provider: r.provider as Integration["provider"],
+    provider,
     name: r.name as string,
-    configJson: r.config_json as string,
+    configJson,
     status: r.status as Integration["status"],
     lastUsedAt: (r.last_used_at as number | null) ?? null,
     createdAt: r.created_at as number,

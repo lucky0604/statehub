@@ -29,6 +29,12 @@ export default defineConfig({
       // api.github.com. The fetch route reads this and injects a stub
       // fetchImpl. Production never sets this.
       STATEHUB_E2E_FETCH_STUB: "1",
+      // P07D: 32-byte test key for encrypting provider tokens at rest.
+      // Generated once with generateKeyB64(); safe to commit because it
+      // only encrypts e2e fixture tokens (which are themselves fake).
+      // Real installs generate their own key via gen:integration-key.
+      STATEHUB_INTEGRATION_KEY:
+        "HSxCoRitm3HevhAi69RWQj3QqvCWXi7gwhPeatjhDgg=",
     },
   },
 });

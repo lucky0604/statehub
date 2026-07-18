@@ -3,8 +3,10 @@
  *
  * Covers:
  *   - integrationService create + list + get + update + remove happy path
- *   - integrationService.create strips PAT from event payload
- *   - integrationService.update patches name + config
+ *   - integrationService.create encrypts PAT (P07D) + strips from event payload
+ *   - integrationService.update patches name + config (encrypting PAT)
+ *   - integrationService.getDecryptedConfig returns plaintext (P07D)
+ *   - integrationService.get masks PAT in configJson (P07D)
  *   - githubIssuesImporter.preview maps issues to work item inputs
  *   - githubIssuesImporter.preview skips issues already linked
  *   - githubIssuesImporter.preview errors on missing title / missing html_url
@@ -14,8 +16,10 @@
  *   - githubIssuesImporter.run records import_job with summary
  *
  * Same in-memory isolation pattern as P03/P04/P05/P06A suites.
+ *
+ * P07D: tests set STATEHUB_INTEGRATION_KEY in beforeAll so encrypt/decrypt works.
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { setDbClient, createInMemoryDb } from "@statehub/db/node";
 import type { DbClient } from "@statehub/db";
 import {
@@ -33,13 +37,18 @@ import {
   getImportJob,
   NotFoundError,
   ValidationError,
+  generateKeyB64,
 } from "@statehub/domain";
+
+const TEST_KEY = generateKeyB64();
+const ORIGINAL_KEY = process.env.STATEHUB_INTEGRATION_KEY;
 
 describe("P06B integrationService", () => {
   let db: DbClient;
   let wsId: string;
 
   beforeAll(async () => {
+    process.env.STATEHUB_INTEGRATION_KEY = TEST_KEY;
     db = createInMemoryDb();
     setDbClient(db);
     const ws = await workspaceService.create(db, SOLO_ACTOR, {
@@ -47,6 +56,14 @@ describe("P06B integrationService", () => {
       name: "P06B Int",
     });
     wsId = ws.id;
+  });
+
+  afterAll(() => {
+    if (ORIGINAL_KEY === undefined) {
+      delete process.env.STATEHUB_INTEGRATION_KEY;
+    } else {
+      process.env.STATEHUB_INTEGRATION_KEY = ORIGINAL_KEY;
+    }
   });
 
   it("creates an integration and round-trips it via get", async () => {
@@ -58,12 +75,22 @@ describe("P06B integrationService", () => {
     expect(integration.id).toBeTruthy();
     expect(integration.provider).toBe("github");
     expect(integration.status).toBe("active");
-    // config_json preserves the PAT server-side.
-    expect(integration.configJson).toContain("ghp_secret");
+    // P07D: returned configJson masks the PAT — never leaks plaintext or ciphertext.
+    expect(integration.configJson).not.toContain("ghp_secret");
+    expect(integration.configJson).toContain('"pat":"••••"');
+    // P07D: the stored row in the DB has the PAT encrypted (not masked, not plaintext).
+    const row = await db.first<{ config_json: string }>(
+      "SELECT config_json FROM integrations WHERE id = ?",
+      [integration.id],
+    );
+    expect(row!.config_json).toContain("enc:v1:");
+    expect(row!.config_json).not.toContain("ghp_secret");
+    expect(row!.config_json).not.toContain("••••");
 
     const fetched = await integrationService.get(db, wsId, integration.id);
     expect(fetched).not.toBeNull();
     expect(fetched!.name).toBe("statehub/core");
+    expect(fetched!.configJson).toContain('"pat":"••••"');
   });
 
   it("lists integrations filtered by provider", async () => {
@@ -83,7 +110,48 @@ describe("P06B integrationService", () => {
       config: { repo: "statehub/core", pat: "ghp_new" },
     });
     expect(updated.name).toBe("new-name");
-    expect(updated.configJson).toContain("ghp_new");
+    // P07D: returned configJson masks the PAT.
+    expect(updated.configJson).not.toContain("ghp_new");
+    expect(updated.configJson).toContain('"pat":"••••"');
+    // P07D: stored row has the PAT encrypted.
+    const row = await db.first<{ config_json: string }>(
+      "SELECT config_json FROM integrations WHERE id = ?",
+      [integration.id],
+    );
+    expect(row!.config_json).toContain("enc:v1:");
+    expect(row!.config_json).not.toContain("ghp_new");
+  });
+
+  it("getDecryptedConfig returns the plaintext token (P07D)", async () => {
+    const integration = await integrationService.create(db, SOLO_ACTOR, wsId, {
+      provider: "github",
+      name: "decrypt-test",
+      config: { repo: "statehub/core", pat: "ghp_decrypt_me" },
+    });
+    const result = await integrationService.getDecryptedConfig(db, wsId, integration.id);
+    expect(result).not.toBeNull();
+    expect(result!.provider).toBe("github");
+    expect(result!.config.pat).toBe("ghp_decrypt_me");
+    expect(result!.config.repo).toBe("statehub/core");
+  });
+
+  it("getDecryptedConfig reads legacy plaintext tokens (P07D lazy migration)", async () => {
+    // Insert a row with raw plaintext config_json (bypass service).
+    const id = crypto.randomUUID();
+    await db.run(
+      `INSERT INTO integrations (id, workspace_id, provider, name, config_json, status, created_by)
+       VALUES (?, ?, 'github', 'legacy', ?, 'active', ?)`,
+      [id, wsId, JSON.stringify({ repo: "statehub/legacy", pat: "ghp_legacy_plain" }), SOLO_ACTOR.id ?? null],
+    );
+    const result = await integrationService.getDecryptedConfig(db, wsId, id);
+    expect(result).not.toBeNull();
+    expect(result!.config.pat).toBe("ghp_legacy_plain");
+    expect(result!.config.repo).toBe("statehub/legacy");
+  });
+
+  it("getDecryptedConfig returns null for missing integration", async () => {
+    const result = await integrationService.getDecryptedConfig(db, wsId, "nonexistent-id");
+    expect(result).toBeNull();
   });
 
   it("removes an integration and is idempotent on second remove", async () => {

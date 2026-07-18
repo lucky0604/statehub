@@ -1,6 +1,16 @@
 // Actor context builders
 export { SOLO_ACTOR, mcpActor, aiPmActor, remoteMcpActor } from "./actor";
 
+// Token encryption (P07D) — AES-256-GCM for provider tokens in config_json.
+export {
+  encryptSecret,
+  decryptSecret,
+  isEncrypted,
+  generateKeyB64,
+  CryptoError,
+  type CryptoOpts,
+} from "./crypto";
+
 // Re-exported types from @statehub/db so consumers can import from one place.
 export {
   type ActorContext,

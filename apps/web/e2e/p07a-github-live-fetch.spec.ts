@@ -237,3 +237,63 @@ test("fetch API route returns issues in the importer's expected shape", async ({
   }
   expect(body.data.provider).toBe("github");
 });
+
+test("GET integration masks the PAT in configJson (P07D)", async ({ page }) => {
+  const { wid } = await discoverSeedIds(page);
+
+  // Create an integration WITH a PAT.
+  const createRes = await page.request.post(
+    `/api/workspaces/${wid}/integrations`,
+    {
+      data: {
+        provider: "github",
+        name: `e2e-mask-${Date.now()}`,
+        config: { repo: "statehub/core", pat: "ghp_e2e_secret_xyz" },
+      },
+    },
+  );
+  expect(createRes.ok()).toBe(true);
+  const createBody = await createRes.json();
+  const newId = createBody.data.integration.id;
+
+  try {
+    // POST response: configJson should mask the PAT — no plaintext, no ciphertext.
+    const createConfig = createBody.data.integration.configJson as string;
+    expect(createConfig).not.toContain("ghp_e2e_secret_xyz");
+    expect(createConfig).not.toContain("enc:v1:");
+    expect(createConfig).toContain('"pat":"••••"');
+
+    // GET response: same masking.
+    const getRes = await page.request.get(
+      `/api/workspaces/${wid}/integrations/${newId}`,
+    );
+    expect(getRes.ok()).toBe(true);
+    const getBody = await getRes.json();
+    const getConfig = getBody.data.integration.configJson as string;
+    expect(getConfig).not.toContain("ghp_e2e_secret_xyz");
+    expect(getConfig).toContain('"pat":"••••"');
+
+    // LIST response: same masking.
+    const listRes = await page.request.get(
+      `/api/workspaces/${wid}/integrations?provider=github`,
+    );
+    expect(listRes.ok()).toBe(true);
+    const listBody = await listRes.json();
+    const listed = listBody.data.integrations as Array<{ id: string; configJson: string }>;
+    const found = listed.find((i) => i.id === newId);
+    expect(found).toBeDefined();
+    expect(found!.configJson).not.toContain("ghp_e2e_secret_xyz");
+    expect(found!.configJson).toContain('"pat":"••••"');
+
+    // Fetch still works — the route decrypts internally (uses stub).
+    const fetchRes = await page.request.post(
+      `/api/workspaces/${wid}/integrations/${newId}/fetch`,
+      { data: {} },
+    );
+    expect(fetchRes.ok()).toBe(true);
+  } finally {
+    await page.request.delete(
+      `/api/workspaces/${wid}/integrations/${newId}`,
+    );
+  }
+});

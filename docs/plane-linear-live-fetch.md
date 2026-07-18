@@ -33,13 +33,44 @@ Wizard "Fetch from provider" button
 
 ## Token storage
 
-Same trust model as P07A: tokens live in `integrations.config_json` as
-plaintext. This is a local-only solo-dev app — the same model as
-`personal_tokens` and the P06B GitHub PAT.
+Tokens are encrypted at rest with **AES-256-GCM** before being written
+to `integrations.config_json` (P07D). The encryption key is read from
+`STATEHUB_INTEGRATION_KEY` (32 bytes, base64-encoded).
+
+See [`docs/github-live-fetch.md`](./github-live-fetch.md) for full
+setup, migration, and threat-model details — the mechanism is identical
+across all three providers. Per-provider secret fields:
+
+- **plane**: `api_token`
+- **linear**: `api_key`
+
+### Setup
+
+```bash
+pnpm --filter @statehub/web run gen:integration-key
+# → STATEHUB_INTEGRATION_KEY=...
+```
+
+### GET responses
+
+GET responses **never** return the token — encrypted or not. The
+mapper masks it as `"api_token":"••••"` (plane) or `"api_key":"••••"`
+(linear). The fetch route decrypts internally via
+`integrationService.getDecryptedConfig()`.
+
+### Migration
+
+Existing integrations created before P07D may still have plaintext
+tokens. The fetch route reads them via legacy fallback. To encrypt,
+PATCH the integration with a fresh token.
+
+### Other guarantees
 
 - The token is never logged.
-- The mapper + GET responses strip the token (return `null`).
-- The fetch route reads the token server-side at fetch time only.
+- Event payloads strip the token entirely (not even the ciphertext
+  appears in the event log).
+- Non-secret config (`workspace_slug`, `team_key`, `base_url`) stays
+  plaintext so the UI can display it without decryption.
 
 ### Plane
 
