@@ -402,11 +402,7 @@ export function ImportWizard({
                 disabled={fetching || !integrationId}
                 className="flex items-center gap-1 text-[11px] text-accent-primary hover:underline disabled:opacity-50"
                 data-testid="import-fetch-btn"
-                title={
-                  selectedProvider === "github"
-                    ? "Pull live issues from GitHub"
-                    : `Live fetch for ${selectedProvider ?? "this provider"} lands in P07B`
-                }
+                title={`Pull live issues from ${selectedProvider ?? "your provider"}`}
               >
                 {fetching ? (
                   <Loader2 className="h-3 w-3 animate-spin" />

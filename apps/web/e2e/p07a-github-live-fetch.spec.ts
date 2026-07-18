@@ -169,19 +169,38 @@ test("run on fetched issues creates work items", async ({ page }) => {
   }
 });
 
-test("fetch on a plane integration returns a clear P07B error", async ({ page }) => {
+test("fetch on a markdown integration returns validation_error (export-only)", async ({ page }) => {
   const { wid } = await discoverSeedIds(page);
-  const iid = await discoverIntegrationId(page, wid, "plane");
 
-  const res = await page.request.post(
-    `/api/workspaces/${wid}/integrations/${iid}/fetch`,
-    { data: {} },
+  // Create a markdown integration (export-only — no live client).
+  const createRes = await page.request.post(
+    `/api/workspaces/${wid}/integrations`,
+    {
+      data: {
+        provider: "markdown",
+        name: `e2e-markdown-${Date.now()}`,
+        config: {},
+      },
+    },
   );
-  expect(res.ok()).toBe(false);
-  const body = await res.json();
-  // Validation error (400) with a clear "P07B" message.
-  expect(body.error_code).toBe("validation_error");
-  expect(body.message).toContain("P07B");
+  expect(createRes.ok()).toBe(true);
+  const createBody = await createRes.json();
+  const mdIntegrationId = createBody.data.integration.id;
+
+  try {
+    const res = await page.request.post(
+      `/api/workspaces/${wid}/integrations/${mdIntegrationId}/fetch`,
+      { data: {} },
+    );
+    expect(res.ok()).toBe(false);
+    const body = await res.json();
+    expect(body.error_code).toBe("validation_error");
+    expect(body.message).toContain("export-only");
+  } finally {
+    await page.request.delete(
+      `/api/workspaces/${wid}/integrations/${mdIntegrationId}`,
+    );
+  }
 });
 
 test("fetch on a missing integration returns 404", async ({ page }) => {
