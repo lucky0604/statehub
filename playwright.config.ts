@@ -24,5 +24,11 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
+    env: {
+      // P07A: stub GitHub REST calls in e2e so the suite never hits real
+      // api.github.com. The fetch route reads this and injects a stub
+      // fetchImpl. Production never sets this.
+      STATEHUB_E2E_FETCH_STUB: "1",
+    },
   },
 });

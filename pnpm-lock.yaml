@@ -100,6 +100,9 @@ importers:
       '@statehub/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@statehub/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
       '@statehub/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -221,6 +224,12 @@ importers:
       '@statehub/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  packages/integrations:
     devDependencies:
       typescript:
         specifier: ^5.7.0
