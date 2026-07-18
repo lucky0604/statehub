@@ -31,15 +31,66 @@ Wizard "Fetch from provider" button
 
 ## PAT storage
 
-The PAT lives in `integrations.config_json` as plaintext, the same
-trust model as P06B and `personal_tokens` (local-only solo-dev app).
+The PAT is encrypted at rest with **AES-256-GCM** before being written
+to `integrations.config_json` (P07D). The encryption key is read from
+`STATEHUB_INTEGRATION_KEY` (32 bytes, base64-encoded).
+
+### Setup
+
+Generate a key and put it in `apps/web/.env.local`:
+
+```bash
+pnpm --filter @statehub/web run gen:integration-key
+# → STATEHUB_INTEGRATION_KEY=...
+```
+
+If the env var is missing:
+- Creating an integration **with a PAT** → 500 `internal_error`
+  ("STATEHUB_INTEGRATION_KEY is not set").
+- Creating an integration **without a PAT** (just `repo`) → works fine.
+- Listing / getting integrations → works fine (PAT is masked, no
+  decrypt needed).
+- Fetching from an integration that has a PAT → 500 `internal_error`.
+
+### What gets encrypted
+
+Only the secret field (`pat` for github) is encrypted. The stored
+`config_json` looks like:
+
+```json
+{"repo":"statehub/core","pat":"enc:v1:<base64(iv+tag+ciphertext)>"}
+```
+
+Non-secret fields (`repo`, `base_url`) stay plaintext so the UI can
+display them without decryption.
+
+### GET responses
+
+GET responses **never** return the PAT — encrypted or not. The mapper
+masks it as `"pat":"••••"`:
+
+```json
+{"repo":"statehub/core","pat":"••••"}
+```
+
+The fetch route bypasses the mapper and uses
+`integrationService.getDecryptedConfig()` to recover the plaintext PAT
+server-side for the provider API call.
+
+### Migration
+
+Existing integrations created before P07D may still have plaintext
+PATs in `config_json`. These remain readable by the fetch route
+(legacy fallback — `decryptSecret` passes through non-`enc:v1:`
+values). They are **not** auto-encrypted. To encrypt, PATCH the
+integration with a fresh PAT — the new value will be stored encrypted.
+
+### Other guarantees
 
 - The PAT is never logged.
-- The mapper + GET responses strip `pat` (return `null`).
-- The fetch route reads the PAT server-side at fetch time only.
-- A later hardening iteration can add AES-GCM encryption with a
-  workspace key from env. The schema already supports a
-  `config_encrypted` column addition via migration when needed.
+- Event payloads strip `pat` entirely (not even the ciphertext
+  appears in the event log).
+- The encryption key never leaves the server.
 
 ## Rate limits
 

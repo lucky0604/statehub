@@ -7,10 +7,11 @@
  *         stores external_source and external_id — the integration is the
  *         per-workspace source-of-truth for that provider config).
  *
- * PAT (personal access token) is stored in config_json plaintext — same
- * trust model as personal_tokens (local-only solo-dev app). Events strip
- * the PAT from their payloads; the mapper + GET responses return pat: null
- * so the PAT never leaves the server after creation.
+ * P07D: provider tokens (`pat`, `api_token`, `api_key`) are encrypted at
+ * rest with AES-256-GCM before being written to `config_json`. The
+ * mapper masks them as `••••` in GET responses. The fetch route uses
+ * `getDecryptedConfig` to recover plaintext tokens for the provider
+ * API call. Event payloads continue to strip secrets via `stripSecrets`.
  */
 import {
   type DbClient,
@@ -22,7 +23,15 @@ import {
   withEvent,
 } from "@statehub/db";
 import { mapIntegration } from "../mappers";
-import { NotFoundError, ValidationError } from "../errors";
+import { NotFoundError, ValidationError, DomainError } from "../errors";
+import {
+  encryptSecret,
+  decryptSecret,
+  isEncrypted,
+  CryptoError,
+  type CryptoOpts,
+} from "../crypto";
+import { SECRET_FIELDS } from "../provider-secrets";
 
 export interface IntegrationService {
   create(
@@ -37,6 +46,12 @@ export interface IntegrationService {
     filter?: { provider?: IntegrationProvider },
   ): Promise<Integration[]>;
   get(db: DbClient, workspaceId: string, id: string): Promise<Integration | null>;
+  getDecryptedConfig(
+    db: DbClient,
+    workspaceId: string,
+    id: string,
+    opts?: CryptoOpts,
+  ): Promise<{ provider: IntegrationProvider; config: Record<string, unknown> } | null>;
   update(
     db: DbClient,
     actor: ActorContext,
@@ -60,16 +75,64 @@ export interface UpdateIntegrationInput {
 }
 
 /**
- * Strip secrets (pat) from a config object before writing it to an event
- * payload. Returns a shallow copy with `pat` removed.
+ * Encrypt secret fields in a config before writing to config_json.
+ * Skips values that are already encrypted (idempotent on re-save).
  */
-function stripSecrets(config: {
-  repo?: string;
-  pat?: string;
-  [key: string]: unknown;
-}): { repo?: string; [key: string]: unknown } {
-  const { pat: _pat, ...rest } = config;
-  return rest;
+function encryptConfig(
+  provider: IntegrationProvider,
+  config: Record<string, unknown>,
+  opts?: CryptoOpts,
+): Record<string, unknown> {
+  const out = { ...config };
+  for (const field of SECRET_FIELDS[provider] ?? []) {
+    const v = out[field];
+    if (typeof v === "string" && v.length > 0 && !isEncrypted(v)) {
+      out[field] = encryptSecret(v, opts);
+    }
+  }
+  return out;
+}
+
+function decryptConfig(
+  provider: IntegrationProvider,
+  config: Record<string, unknown>,
+  opts?: CryptoOpts,
+): Record<string, unknown> {
+  const out = { ...config };
+  for (const field of SECRET_FIELDS[provider] ?? []) {
+    const v = out[field];
+    if (typeof v === "string" && isEncrypted(v)) {
+      out[field] = decryptSecret(v, opts);
+    }
+  }
+  return out;
+}
+
+/**
+ * Strip ALL secret fields from a config before writing it to an event
+ * payload. Event payloads must not contain tokens — encrypted or not,
+ * the ciphertext is still sensitive metadata.
+ */
+function stripSecrets(
+  provider: IntegrationProvider,
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const out = { ...config };
+  for (const field of SECRET_FIELDS[provider] ?? []) {
+    delete out[field];
+  }
+  return out;
+}
+
+/**
+ * Wrap CryptoError as DomainError so the API handler's existing
+ * DomainError path produces a clean 500 envelope.
+ */
+function wrapCryptoError(err: unknown): never {
+  if (err instanceof CryptoError) {
+    throw new DomainError("internal_error", err.message, { crypto_code: err.code });
+  }
+  throw err;
 }
 
 /**
@@ -110,8 +173,15 @@ export const integrationService: IntegrationService = {
     if (!input.name?.trim()) throw new ValidationError("name is required");
     validateProviderConfig(input.provider, input.config);
 
+    let storedConfig: Record<string, unknown>;
+    try {
+      storedConfig = encryptConfig(input.provider, input.config);
+    } catch (err) {
+      wrapCryptoError(err);
+    }
+
     const id = crypto.randomUUID();
-    const configJson = JSON.stringify(input.config);
+    const configJson = JSON.stringify(storedConfig);
     const params: SqlBindValue[] = [
       id,
       workspaceId,
@@ -136,7 +206,7 @@ export const integrationService: IntegrationService = {
             id,
             provider: input.provider,
             name: input.name,
-            config: stripSecrets(input.config),
+            config: stripSecrets(input.provider, input.config),
           },
         },
       },
@@ -180,13 +250,35 @@ export const integrationService: IntegrationService = {
     return row ? mapIntegration(row) : null;
   },
 
+  async getDecryptedConfig(db, workspaceId, id, opts) {
+    const row = await db.first<Record<string, unknown>>(
+      "SELECT * FROM integrations WHERE id = ? AND workspace_id = ?",
+      [id, workspaceId],
+    );
+    if (!row) return null;
+    const provider = row.provider as IntegrationProvider;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(row.config_json as string) as Record<string, unknown>;
+    } catch {
+      throw new DomainError("internal_error", "integration config_json is corrupt");
+    }
+    let config: Record<string, unknown>;
+    try {
+      config = decryptConfig(provider, parsed, opts);
+    } catch (err) {
+      wrapCryptoError(err);
+    }
+    return { provider, config };
+  },
+
   async update(db, actor, workspaceId, id, patch) {
     const existing = await integrationService.get(db, workspaceId, id);
     if (!existing) throw new NotFoundError("integration", id);
 
     const sets: string[] = [];
     const params: SqlBindValue[] = [];
-    let nextConfig: { repo?: string; pat?: string; [key: string]: unknown } | undefined;
+    let nextConfig: Record<string, unknown> | undefined;
 
     if (patch.name !== undefined) {
       if (!patch.name.trim()) throw new ValidationError("name cannot be empty");
@@ -194,9 +286,15 @@ export const integrationService: IntegrationService = {
       params.push(patch.name);
     }
     if (patch.config !== undefined) {
+      let stored: Record<string, unknown>;
+      try {
+        stored = encryptConfig(existing.provider, patch.config);
+      } catch (err) {
+        wrapCryptoError(err);
+      }
       nextConfig = patch.config;
       sets.push("config_json = ?");
-      params.push(JSON.stringify(patch.config));
+      params.push(JSON.stringify(stored));
     }
     if (patch.status !== undefined) {
       sets.push("status = ?");
@@ -207,6 +305,7 @@ export const integrationService: IntegrationService = {
     params.push(id);
     params.push(workspaceId);
 
+    const existingParsed = JSON.parse(existing.configJson) as Record<string, unknown>;
     await withEvent(
       db,
       {
@@ -220,12 +319,12 @@ export const integrationService: IntegrationService = {
           before: {
             id,
             name: existing.name,
-            config: stripSecrets(JSON.parse(existing.configJson) as { pat?: string }),
+            config: stripSecrets(existing.provider, existingParsed),
           },
           after: {
             id,
             name: patch.name ?? existing.name,
-            config: nextConfig ? stripSecrets(nextConfig) : undefined,
+            config: nextConfig ? stripSecrets(existing.provider, nextConfig) : undefined,
             status: patch.status,
           },
         },
@@ -250,6 +349,7 @@ export const integrationService: IntegrationService = {
     const existing = await integrationService.get(db, workspaceId, id);
     if (!existing) throw new NotFoundError("integration", id);
 
+    const existingParsed = JSON.parse(existing.configJson) as Record<string, unknown>;
     await withEvent(
       db,
       {
@@ -264,7 +364,7 @@ export const integrationService: IntegrationService = {
             id,
             provider: existing.provider,
             name: existing.name,
-            config: stripSecrets(JSON.parse(existing.configJson) as { pat?: string }),
+            config: stripSecrets(existing.provider, existingParsed),
           },
         },
       },

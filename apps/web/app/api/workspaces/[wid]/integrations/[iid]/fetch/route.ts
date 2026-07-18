@@ -40,7 +40,6 @@ import {
 } from "@statehub/integrations";
 import { withEnvelope, parseBody, param } from "@/lib/api-handler";
 import { db } from "@/lib/server";
-
 export const runtime = "nodejs";
 
 /** Test-only stub fetch — returns canned JSON per provider.
@@ -192,23 +191,17 @@ export const POST = withEnvelope(async (req, params) => {
   const wid = param(params, "wid");
   const iid = param(params, "iid");
 
-  const integration = await integrationService.get(db(), wid, iid);
-  if (!integration) throw new NotFoundError("integration", iid);
-
-  let config: Record<string, unknown>;
-  try {
-    config = JSON.parse(integration.configJson) as Record<string, unknown>;
-  } catch {
-    throw new ValidationError("integration config_json is corrupt");
-  }
+  const decrypted = await integrationService.getDecryptedConfig(db(), wid, iid);
+  if (!decrypted) throw new NotFoundError("integration", iid);
+  const { provider, config } = decrypted;
 
   const client = pickClient<GithubIssue | PlaneIssue | LinearIssue>(
-    integration.provider,
+    provider,
     config,
   );
   if (!client) {
     throw new ValidationError(
-      `live fetch for provider "${integration.provider}" is not supported (markdown is export-only)`,
+      `live fetch for provider "${provider}" is not supported (markdown is export-only)`,
     );
   }
 
@@ -222,13 +215,13 @@ export const POST = withEnvelope(async (req, params) => {
   try {
     const result = await client.listIssues({
       maxIssues,
-      ...(useStub ? { fetchImpl: stubFetchForProvider(integration.provider) } : {}),
+      ...(useStub ? { fetchImpl: stubFetchForProvider(provider) } : {}),
     });
     return {
       issues: result.issues,
       has_more: result.hasMore,
       pages_fetched: result.pagesFetched,
-      provider: integration.provider,
+      provider,
     };
   } catch (err) {
     if (err instanceof RateLimitError) {
