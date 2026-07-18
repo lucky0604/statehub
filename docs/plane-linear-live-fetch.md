@@ -145,6 +145,27 @@ GitHub. The `has_more` flag tells the UI when the cap was hit.
 - **Linear**: paginates via GraphQL cursor pagination
   (`pageInfo.hasNextPage` + `endCursor`).
 
+## Incremental sync (P07E)
+
+Re-fetch is incremental: the fetch route passes `since=<last_fetch_at>`
+to the provider's `updated_at` filter, so only issues updated after
+the previous successful fetch are returned. The first fetch is full.
+
+- **Plane**: `?updated_at__gte=<ISO>` query param (Django-style
+  filter). Self-hosted Plane versions that don't support this filter
+  will return an error — fall back to full fetch by recreating the
+  integration.
+- **Linear**: GraphQL `filter: { updatedAt: { gte: $since } }` with
+  `orderBy: updatedAt`. When `since` is null, Linear treats it as no
+  filter (full fetch).
+
+`integrations.last_used_at` tracks the last successful fetch
+timestamp. A 5-second safety margin is subtracted to absorb clock
+skew. The fetch response includes `since_used: string | null` so the
+UI can show the fetch mode. See
+[`docs/github-live-fetch.md`](./github-live-fetch.md#incremental-sync-p07e)
+for the full mechanism — identical across all three providers.
+
 ## Testing
 
 ### Unit tests

@@ -51,7 +51,12 @@ export interface IntegrationService {
     workspaceId: string,
     id: string,
     opts?: CryptoOpts,
-  ): Promise<{ provider: IntegrationProvider; config: Record<string, unknown> } | null>;
+  ): Promise<{
+    provider: IntegrationProvider;
+    config: Record<string, unknown>;
+    lastUsedAt: number | null;
+  } | null>;
+  markFetched(db: DbClient, workspaceId: string, id: string): Promise<void>;
   update(
     db: DbClient,
     actor: ActorContext,
@@ -269,7 +274,18 @@ export const integrationService: IntegrationService = {
     } catch (err) {
       wrapCryptoError(err);
     }
-    return { provider, config };
+    const lastUsedAt = (row.last_used_at as number | null) ?? null;
+    return { provider, config, lastUsedAt };
+  },
+
+  async markFetched(db, workspaceId, id) {
+    // Fire-and-forget: update last_used_at to now. Not in the event log
+    // (same pattern as personal_tokens.last_used_at). The fetch itself
+    // is auditable via import_jobs when the user runs the import.
+    await db.run(
+      "UPDATE integrations SET last_used_at = ? WHERE id = ? AND workspace_id = ?",
+      [Date.now(), id, workspaceId],
+    );
   },
 
   async update(db, actor, workspaceId, id, patch) {

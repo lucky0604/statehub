@@ -158,6 +158,29 @@ response tells the UI when the cap was hit. Larger imports need the
 cap raised (via `max_issues` body field, max 10000) or a paginated
 UI in a later iteration.
 
+## Incremental sync (P07E)
+
+Re-fetch is incremental: the fetch route passes `since=<last_fetch_at>`
+to GitHub's `?since=` filter, so only issues updated after the
+previous successful fetch are returned. The first fetch is full.
+
+`integrations.last_used_at` tracks the last successful fetch
+timestamp. Failed fetches don't update it, so retries stay
+incremental from the last success.
+
+A 5-second safety margin is subtracted from `last_fetch_at` before
+passing as `since` to absorb clock skew between our server and
+GitHub's API. The margin is a constant (`5_000` ms) — easy to tune.
+
+The fetch response includes `since_used: string | null` so the UI can
+show "Incremental fetch since <date>" vs "Full fetch (first time)".
+The wizard shows the next-fetch mode hint next to the Fetch button
+based on the selected integration's `lastUsedAt`.
+
+To force a full re-fetch, delete the integration and recreate it
+(this clears `last_used_at`). A "reset incremental" button is a
+later polish.
+
 ## Testing
 
 ### Unit tests

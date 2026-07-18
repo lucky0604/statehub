@@ -105,7 +105,11 @@ export class PlaneClient implements ProviderClient<PlaneIssue> {
     const issues: PlaneIssue[] = [];
     let pagesFetched = 0;
     let hasMore = false;
-    let nextUrl: string | null = buildIssuesUrl(this.baseUrl, this.workspaceSlug);
+    let nextUrl: string | null = buildIssuesUrl(
+      this.baseUrl,
+      this.workspaceSlug,
+      opts?.since,
+    );
 
     while (nextUrl && pagesFetched < HARD_PAGE_CAP) {
       const res = await this.safeFetch(fetchImpl, nextUrl);
@@ -198,8 +202,9 @@ export class PlaneClient implements ProviderClient<PlaneIssue> {
   }
 }
 
-function buildIssuesUrl(baseUrl: string, workspaceSlug: string): string {
+function buildIssuesUrl(baseUrl: string, workspaceSlug: string, since?: string): string {
   const params = new URLSearchParams({ per_page: String(PER_PAGE) });
+  if (since) params.set("updated_at__gte", since);
   return `${baseUrl}/v1/workspaces/${workspaceSlug}/issues/?${params.toString()}`;
 }
 

@@ -106,7 +106,7 @@ test("preview works on fetched issues", async ({ page }) => {
   // Wait for the fetch to actually populate the textarea before moving on —
   // the click returns immediately but setIssuesJson is async.
   await expect(page.getByTestId("import-issues-json")).toHaveValue(/7001/);
-  await expect(page.getByTestId("import-fetch-note")).toContainText(/Fetched/);
+  await expect(page.getByTestId("import-fetch-note")).toContainText(/fetch/i);
 
   await page.getByTestId("import-project-select").selectOption(pid);
   await page.getByTestId("import-state-select").selectOption(stateId);
@@ -150,7 +150,7 @@ test("run on fetched issues creates work items", async ({ page }) => {
 
     // Wait for the fetch to populate the textarea before clicking preview.
     await expect(page.getByTestId("import-issues-json")).toHaveValue(/7001/);
-    await expect(page.getByTestId("import-fetch-note")).toContainText(/Fetched/);
+    await expect(page.getByTestId("import-fetch-note")).toContainText(/fetch/i);
 
     await page.getByTestId("import-project-select").selectOption(pid);
     await page.getByTestId("import-state-select").selectOption(stateId);
@@ -236,6 +236,60 @@ test("fetch API route returns issues in the importer's expected shape", async ({
     expect(issue.state).toMatch(/^(open|closed)$/);
   }
   expect(body.data.provider).toBe("github");
+});
+
+test("P07E: successful fetch updates lastUsedAt and returns since_used null on first fetch", async ({ page }) => {
+  const { wid } = await discoverSeedIds(page);
+
+  // Create a fresh integration — lastUsedAt is null.
+  const createRes = await page.request.post(
+    `/api/workspaces/${wid}/integrations`,
+    {
+      data: {
+        provider: "github",
+        name: `e2e-incr-${Date.now()}`,
+        config: { repo: "e2e-stub/example" },
+      },
+    },
+  );
+  expect(createRes.ok()).toBe(true);
+  const createBody = await createRes.json();
+  const newId = createBody.data.integration.id;
+
+  try {
+    // First fetch: since_used should be null (full fetch).
+    const fetch1 = await page.request.post(
+      `/api/workspaces/${wid}/integrations/${newId}/fetch`,
+      { data: {} },
+    );
+    expect(fetch1.ok()).toBe(true);
+    const body1 = await fetch1.json();
+    expect(body1.data.since_used).toBeNull();
+
+    // GET integration: lastUsedAt should now be non-null.
+    const getRes = await page.request.get(
+      `/api/workspaces/${wid}/integrations/${newId}`,
+    );
+    expect(getRes.ok()).toBe(true);
+    const getBody = await getRes.json();
+    expect(getBody.data.integration.lastUsedAt).not.toBeNull();
+
+    // Second fetch: since_used should be non-null (incremental).
+    const fetch2 = await page.request.post(
+      `/api/workspaces/${wid}/integrations/${newId}/fetch`,
+      { data: {} },
+    );
+    expect(fetch2.ok()).toBe(true);
+    const body2 = await fetch2.json();
+    expect(body2.data.since_used).not.toBeNull();
+    expect(typeof body2.data.since_used).toBe("string");
+    // since_used should be an ISO date string.
+    expect(body2.data.since_used).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  } finally {
+    await page.request.delete(
+      `/api/workspaces/${wid}/integrations/${newId}`,
+    );
+  }
 });
 
 test("GET integration masks the PAT in configJson (P07D)", async ({ page }) => {

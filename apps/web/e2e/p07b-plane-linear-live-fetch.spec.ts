@@ -94,7 +94,7 @@ test("preview works on fetched plane issues", async ({ page }) => {
   await page.getByTestId("import-fetch-btn").click();
 
   await expect(page.getByTestId("import-issues-json")).toHaveValue(/DEMO-7001/);
-  await expect(page.getByTestId("import-fetch-note")).toContainText(/Fetched/);
+  await expect(page.getByTestId("import-fetch-note")).toContainText(/fetch/i);
 
   await page.getByTestId("import-project-select").selectOption(pid);
   await page.getByTestId("import-state-select").selectOption(stateId);
@@ -136,7 +136,7 @@ test("run on fetched plane issues creates work items", async ({ page }) => {
     await page.getByTestId("import-fetch-btn").click();
 
     await expect(page.getByTestId("import-issues-json")).toHaveValue(/DEMO-7001/);
-    await expect(page.getByTestId("import-fetch-note")).toContainText(/Fetched/);
+    await expect(page.getByTestId("import-fetch-note")).toContainText(/fetch/i);
 
     await page.getByTestId("import-project-select").selectOption(pid);
     await page.getByTestId("import-state-select").selectOption(stateId);
@@ -182,7 +182,7 @@ test("preview works on fetched linear issues", async ({ page }) => {
   await page.getByTestId("import-fetch-btn").click();
 
   await expect(page.getByTestId("import-issues-json")).toHaveValue(/DEMO-7001/);
-  await expect(page.getByTestId("import-fetch-note")).toContainText(/Fetched/);
+  await expect(page.getByTestId("import-fetch-note")).toContainText(/fetch/i);
 
   await page.getByTestId("import-project-select").selectOption(pid);
   await page.getByTestId("import-state-select").selectOption(stateId);
@@ -224,7 +224,7 @@ test("run on fetched linear issues creates work items", async ({ page }) => {
     await page.getByTestId("import-fetch-btn").click();
 
     await expect(page.getByTestId("import-issues-json")).toHaveValue(/DEMO-7001/);
-    await expect(page.getByTestId("import-fetch-note")).toContainText(/Fetched/);
+    await expect(page.getByTestId("import-fetch-note")).toContainText(/fetch/i);
 
     await page.getByTestId("import-project-select").selectOption(pid);
     await page.getByTestId("import-state-select").selectOption(stateId);

@@ -154,6 +154,31 @@ describe("P06B integrationService", () => {
     expect(result).toBeNull();
   });
 
+  it("getDecryptedConfig returns lastUsedAt (P07E)", async () => {
+    const integration = await integrationService.create(db, SOLO_ACTOR, wsId, {
+      provider: "github",
+      name: "last-used-test",
+      config: { repo: "statehub/core" },
+    });
+    // Fresh integration: lastUsedAt is null.
+    const before = await integrationService.getDecryptedConfig(db, wsId, integration.id);
+    expect(before!.lastUsedAt).toBeNull();
+
+    // Mark fetched → lastUsedAt becomes non-null.
+    await integrationService.markFetched(db, wsId, integration.id);
+    const after = await integrationService.getDecryptedConfig(db, wsId, integration.id);
+    expect(after!.lastUsedAt).not.toBeNull();
+    expect(typeof after!.lastUsedAt).toBe("number");
+    expect(after!.lastUsedAt).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("markFetched is a no-op for missing integration (P07E)", async () => {
+    // Should not throw — the UPDATE just affects 0 rows.
+    await expect(
+      integrationService.markFetched(db, wsId, "nonexistent-id"),
+    ).resolves.toBeUndefined();
+  });
+
   it("removes an integration and is idempotent on second remove", async () => {
     const integration = await integrationService.create(db, SOLO_ACTOR, wsId, {
       provider: "github",

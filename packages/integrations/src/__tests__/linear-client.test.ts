@@ -260,4 +260,29 @@ describe("LinearClient.listIssues", () => {
     const url = fetchImpl.mock.calls[0]![0] as string;
     expect(url).toBe("https://linear.internal/graphql");
   });
+
+  it("passes since as a GraphQL variable when provided (P07E)", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(makeResponse(gqlPage(1)));
+    const client = new LinearClient({ teamKey: "DEMO" });
+    await client.listIssues({
+      fetchImpl,
+      since: "2026-07-01T00:00:00Z",
+    });
+
+    const init = fetchImpl.mock.calls[0]![1] as RequestInit;
+    const body = JSON.parse(init.body as string);
+    expect(body.variables.since).toBe("2026-07-01T00:00:00Z");
+    // The query should include the filter clause referencing $since.
+    expect(body.query).toContain("updatedAt: { gte: $since }");
+  });
+
+  it("passes since: null when omitted (Linear treats as no filter)", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(makeResponse(gqlPage(1)));
+    const client = new LinearClient({ teamKey: "DEMO" });
+    await client.listIssues({ fetchImpl });
+
+    const init = fetchImpl.mock.calls[0]![1] as RequestInit;
+    const body = JSON.parse(init.body as string);
+    expect(body.variables.since).toBeNull();
+  });
 });

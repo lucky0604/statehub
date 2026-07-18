@@ -193,7 +193,7 @@ export const POST = withEnvelope(async (req, params) => {
 
   const decrypted = await integrationService.getDecryptedConfig(db(), wid, iid);
   if (!decrypted) throw new NotFoundError("integration", iid);
-  const { provider, config } = decrypted;
+  const { provider, config, lastUsedAt } = decrypted;
 
   const client = pickClient<GithubIssue | PlaneIssue | LinearIssue>(
     provider,
@@ -211,17 +211,30 @@ export const POST = withEnvelope(async (req, params) => {
       ? Math.min(body.max_issues, 10000)
       : undefined;
 
+  // P07E: incremental sync. Pass since = lastUsedAt (minus a 5s skew
+  // margin) so the provider only returns issues updated after the
+  // previous successful fetch. First fetch → lastUsedAt is null → full.
+  const since =
+    lastUsedAt !== null
+      ? new Date(lastUsedAt - 5_000).toISOString()
+      : undefined;
+
   const useStub = process.env.STATEHUB_E2E_FETCH_STUB === "1";
   try {
     const result = await client.listIssues({
       maxIssues,
+      since,
       ...(useStub ? { fetchImpl: stubFetchForProvider(provider) } : {}),
     });
+    // Only mark fetched after a successful listIssues — failed fetches
+    // keep the previous lastUsedAt so retries stay incremental.
+    await integrationService.markFetched(db(), wid, iid);
     return {
       issues: result.issues,
       has_more: result.hasMore,
       pages_fetched: result.pagesFetched,
       provider,
+      since_used: since ?? null,
     };
   } catch (err) {
     if (err instanceof RateLimitError) {
