@@ -32,8 +32,8 @@ export function getD1(): D1Database {
 }
 
 /**
- * True if a binding has been registered. Used by /api/health to report
- * "connected" vs "disconnected" without throwing.
+ * True if a binding has been registered. Used internally by
+ * `getDb()` in db-client.ts to pick the D1 path over better-sqlite3.
  */
 export function hasD1(): boolean {
   return _binding !== null;
