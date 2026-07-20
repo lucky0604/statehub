@@ -1,0 +1,20 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "statehub-web"
+compatibility_date = "2026-07-01"
+# nodejs_compat is required for the OpenNext adapter (uses node:buffer,
+# node:crypto, node:module, etc.) and for our own crypto module
+# (packages/domain/src/crypto.ts uses node:crypto for AES-256-GCM).
+compatibility_flags = ["nodejs_compat"]
+
+# OpenNext outputs the Worker bundle to .open-next/.
+pages_build_output_dir = ".open-next"
+
+# D1 binding — the same database as apps/mcp-remote (one D1, two
+# entrypoints). Replace `database_id = "local"` with the real ID from
+# `npx wrangler d1 create statehub-local` before your first deploy.
+# See docs/deploying.md.
+[[d1_databases]]
+binding = "DB"
+database_name = "statehub-local"
+database_id = "local"
+migrations_dir = "../../packages/db/migrations"

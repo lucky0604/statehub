@@ -34,6 +34,13 @@ export const envSchema = z.object({
 
   // App URL for canonical links, OAuth redirects. Defaults to local dev.
   APP_URL: z.string().url().default("http://localhost:3000"),
+
+  // P07D: AES-256-GCM key for encrypting provider tokens at rest.
+  // Base64-encoded 32-byte key. Generate with:
+  //   pnpm --filter @statehub/web run gen:integration-key
+  // Required in production; in dev the crypto module falls back to a
+  // dev-only key with a console warning. Read by packages/domain/src/crypto.ts.
+  STATEHUB_INTEGRATION_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

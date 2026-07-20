@@ -1,6 +1,10 @@
 import { err } from "@statehub/shared";
 
-export const runtime = "edge";
+// P08A: was `runtime = "edge"` but OpenNext (Cloudflare Pages adapter)
+// requires edge-runtime routes to be split into a separate function.
+// This handler is trivial — no edge-only APIs — so nodejs is fine and
+// keeps the bundle simple.
+export const runtime = "nodejs";
 
 /**
  * Catch-all 404 handler for /api/* routes that don't match.
