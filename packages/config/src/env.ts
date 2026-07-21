@@ -41,6 +41,13 @@ export const envSchema = z.object({
   // Required in production; in dev the crypto module falls back to a
   // dev-only key with a console warning. Read by packages/domain/src/crypto.ts.
   STATEHUB_INTEGRATION_KEY: z.string().optional(),
+
+  // P08B: HMAC-SHA256 secret for signing session cookies. Base64-encoded
+  // 32-byte key, same format as STATEHUB_INTEGRATION_KEY. Generate with:
+  //   pnpm --filter @statehub/web run gen:auth-secret
+  // Required in production (middleware returns 500 without it). Read by
+  // packages/domain/src/auth/session.ts and apps/web/middleware.ts.
+  STATEHUB_AUTH_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

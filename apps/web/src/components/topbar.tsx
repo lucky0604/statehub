@@ -2,6 +2,7 @@ import { McpSyncIndicator } from "./mcp-sync/mcp-sync-indicator";
 import { getMcpSync } from "@/lib/queries";
 import { cn } from "../lib/cn";
 import { ThemeToggle } from "./theme-toggle";
+import { LogoutButton } from "./logout-button";
 
 /**
  * TopBar — 48px high global header.
@@ -55,7 +56,7 @@ export async function TopBar({
           <span className="text-[12px] text-txt-tertiary">MCP not configured</span>
         )}
         <ThemeToggle />
-        <span className="ml-2 text-[12px] text-txt-tertiary">User menu placeholder</span>
+        <LogoutButton />
       </div>
     </header>
   );

@@ -1,4 +1,9 @@
 export { sequenceService, type SequenceService } from "./sequence";
+export {
+  authService,
+  type AuthService,
+  requireUser,
+} from "./auth";
 export { workspaceService, type WorkspaceService, type CreateWorkspaceInput, type UpdateWorkspaceInput } from "./workspace";
 export { projectService, type ProjectService, type CreateProjectInput, type UpdateProjectInput } from "./project";
 export { stateService, type StateService, type CreateStateInput, type UpdateStateInput } from "./state";

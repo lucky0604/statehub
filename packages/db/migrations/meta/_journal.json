@@ -71,6 +71,13 @@
       "when": 1784267438965,
       "tag": "0009_lethal_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1784613469480,
+      "tag": "0010_adorable_albert_cleary",
+      "breakpoints": true
     }
   ]
 }

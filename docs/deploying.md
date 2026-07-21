@@ -55,22 +55,24 @@ In the Cloudflare dashboard:
 | Variable | Required | How to generate |
 |---|---|---|
 | `STATEHUB_INTEGRATION_KEY` | yes | `pnpm --filter @statehub/web run gen:integration-key` (paste the base64 string) |
+| `STATEHUB_AUTH_SECRET` | yes | `pnpm --filter @statehub/web run gen:auth-secret` (paste the base64 string; see "Securing the deploy" below) |
 | `APP_URL` | yes | `https://<project>.pages.dev` (set after first deploy) |
 | `OPENAI_API_KEY` | no | OpenAI dashboard |
 | `ANTHROPIC_API_KEY` | no | Anthropic console |
 | `GEMINI_API_KEY` | no | Google AI Studio |
 | `DEEPSEEK_API_KEY` | no | DeepSeek platform |
 | `GLM_API_KEY` | no | Zhipu AI platform |
-| `AUTH_MODE` | defaults to `disabled` | leave `disabled` for solo (see "Securing the deploy" below) |
 
-Use **Encrypt** for `STATEHUB_INTEGRATION_KEY` and any AI provider
-keys — they're secrets. `APP_URL` can be plaintext.
+Use **Encrypt** for `STATEHUB_INTEGRATION_KEY`, `STATEHUB_AUTH_SECRET`,
+and any AI provider keys — they're secrets. `APP_URL` can be plaintext.
 
 Or via CLI:
 
 ```bash
-npx wrangler pages secret put STATEHUB_INTEGRATION_KEY --project-name statehub-web
-# paste the base64 string at the prompt
+cd apps/web
+npx wrangler secret put STATEHUB_INTEGRATION_KEY
+npx wrangler secret put STATEHUB_AUTH_SECRET
+# paste the base64 strings at each prompt
 ```
 
 ## 4. First deploy
@@ -78,15 +80,15 @@ npx wrangler pages secret put STATEHUB_INTEGRATION_KEY --project-name statehub-w
 From the repo root:
 
 ```bash
-pnpm deploy
+pnpm deploy:web
 ```
 
 This runs:
 
 1. `pnpm --filter @statehub/web build` (Next.js build)
 2. `opennextjs-cloudflare` (bundles the Next.js build for Cloudflare
-   Pages Workers runtime)
-3. `wrangler pages deploy` (uploads the bundle to Cloudflare)
+   Workers runtime)
+3. `wrangler deploy` (uploads the Worker + static assets to Cloudflare)
 
 The first deploy prints a URL like
 `https://statehub-web-abc123.pages.dev`. Open it, click around, create
@@ -102,41 +104,87 @@ Any time you pull changes from main:
 ```bash
 git pull
 pnpm install                              # if pnpm-lock.yaml changed
-pnpm deploy
+pnpm deploy:web
 ```
 
 For schema changes (new migrations in `packages/db/migrations/`):
 
 ```bash
 npx wrangler d1 migrations apply statehub-local --remote
-pnpm deploy
+pnpm deploy:web
 ```
 
 ## Securing the deploy
 
-**Important:** StateHub is currently solo-dev only — there is no
-authentication. Anyone with the URL can read and write your workspace
-data. Until auth lands (later phase), use one of these:
+StateHub ships with built-in email/password auth (P08B). Every
+non-public route goes through `apps/web/middleware.ts`, which verifies
+an HMAC-signed `statehub_session` cookie. Sessions are stateless —
+there is no DB row to revoke; rotating `STATEHUB_AUTH_SECRET`
+invalidates all outstanding sessions.
 
-### Option A: Keep the URL private (default)
+To enable auth on a fresh deploy:
 
-Treat the `*.pages.dev` URL like a password. Don't share it, don't
-commit it. Fine for personal use.
+1. **Generate an auth secret and set it as a Cloudflare secret:**
 
-### Option B: Cloudflare Access (recommended for shared use)
+   ```bash
+   pnpm --filter @statehub/web run gen:auth-secret
+   # prints STATEHUB_AUTH_SECRET=<base64>
+   cd apps/web
+   npx wrangler secret put STATEHUB_AUTH_SECRET
+   # paste the base64 string at the prompt
+   ```
 
-Cloudflare Access (part of Zero Trust, free up to 50 users) gates
-your Pages project behind an identity check (Google, GitHub, email
-OTP, SSO, etc.).
+2. **Apply migrations to remote D1** (adds the `password_hash` column):
 
-1. Cloudflare dashboard → Zero Trust → Access → Applications → Add
-   an application → Self-hosted.
-2. Application domain: `your-statehub.pages.dev`.
-3. Policy: allow your email (or your team's domain).
-4. Save. Visiting the URL now redirects to a login page.
+   ```bash
+   npx wrangler d1 migrations apply statehub-local --remote
+   ```
 
-This is a stopgap — proper built-in auth (`AUTH_MODE=token` or
-`oauth`) is on the roadmap.
+3. **Create your first user** — the script shells out to
+   `wrangler d1 execute --remote`:
+
+   ```bash
+   pnpm --filter @statehub/web run add-user -- \
+     --email=you@example.com --name=You --password='minimum-8-chars' --remote
+   ```
+
+   Re-running the same command resets the password for an existing
+   user (idempotent).
+
+4. **Deploy:**
+
+   ```bash
+   pnpm deploy:web
+   ```
+
+Visiting `https://<your-domain>/` now redirects to `/login`. Sign in
+with the credentials you just created.
+
+### Rotating the auth secret
+
+If you need to invalidate all outstanding sessions (e.g. a suspected
+cookie leak):
+
+```bash
+cd apps/web
+npx wrangler secret put STATEHUB_AUTH_SECRET
+# paste a freshly generated base64 string
+pnpm deploy:web
+```
+
+Every user gets redirected to `/login` on their next request.
+
+### Public routes
+
+The following paths skip the auth check (see
+`apps/web/middleware.ts`):
+
+- `/login` — the login form
+- `/api/auth/login`, `/api/auth/logout` — auth endpoints
+- `/api/health` — health check
+
+Requests with a `Bearer` Authorization header also skip cookie auth —
+the local MCP sidecar uses this path (`/api/workspaces/[wid]/projects/[pid]/local-evidence`) with a workspace-scoped personal token.
 
 ## Troubleshooting
 

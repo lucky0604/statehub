@@ -1,20 +1,31 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "statehub-web"
+main = ".open-next/worker.js"
 compatibility_date = "2026-07-01"
-# nodejs_compat is required for the OpenNext adapter (uses node:buffer,
-# node:crypto, node:module, etc.) and for our own crypto module
-# (packages/domain/src/crypto.ts uses node:crypto for AES-256-GCM).
-compatibility_flags = ["nodejs_compat"]
+# nodejs_compat: required by OpenNext (node:buffer, node:crypto, node:module)
+# and by our crypto module (packages/domain/src/crypto.ts uses node:crypto
+# for AES-256-GCM).
+# global_fetch_strictly_public: OpenNext default — prevents fetch() from
+# reaching back into the Worker via the public URL (avoids loops).
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
-# OpenNext outputs the Worker bundle to .open-next/.
-pages_build_output_dir = ".open-next"
+# Static assets (Next.js static, images, etc.) served by the Workers
+# runtime. The Worker handles all other routes.
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# Self-reference service binding (used by OpenNext for skew protection
+# and self-calling fetch). Service name must match the worker name.
+[[services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "statehub-web"
 
 # D1 binding — the same database as apps/mcp-remote (one D1, two
-# entrypoints). Replace `database_id = "local"` with the real ID from
-# `npx wrangler d1 create statehub-local` before your first deploy.
+# entrypoints). database_id from `wrangler d1 create statehub-local`.
 # See docs/deploying.md.
 [[d1_databases]]
 binding = "DB"
 database_name = "statehub-local"
-database_id = "local"
+database_id = "d59a8c27-ed73-40ad-9ff9-3e736398b909"
 migrations_dir = "../../packages/db/migrations"
