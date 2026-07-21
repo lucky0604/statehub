@@ -32,6 +32,7 @@ export function createInMemoryDb(): DbClient {
     "0007_amused_quasimodo.sql",
     "0008_odd_lightspeed.sql",
     "0009_lethal_avengers.sql",
+    "0010_adorable_albert_cleary.sql",
   ]) {
     const sql = readFileSync(resolve(MIGRATIONS_DIR, file), "utf8");
     raw.exec(sql);

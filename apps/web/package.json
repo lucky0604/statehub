@@ -7,12 +7,14 @@
     "dev": "next dev",
     "build": "next build",
     "build:worker": "opennextjs-cloudflare build",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preview": "opennextjs-cloudflare build && wrangler pages dev",
+    "deploy": "opennextjs-cloudflare build && rm -rf .open-next/server-functions/default/apps/web/.next/cache && wrangler deploy --keep-vars",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "next lint",
-    "gen:integration-key": "tsx scripts/gen-integration-key.ts"
+    "gen:integration-key": "tsx scripts/gen-integration-key.ts",
+    "gen:auth-secret": "tsx scripts/gen-auth-secret.ts",
+    "add-user": "tsx scripts/add-user.ts"
   },
   "dependencies": {
     "@statehub/config": "workspace:*",

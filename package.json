@@ -18,7 +18,7 @@
     "db:studio": "pnpm --filter @statehub/db db:studio",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "deploy": "pnpm --filter @statehub/web deploy"
+    "deploy:web": "pnpm --filter @statehub/web run deploy"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",

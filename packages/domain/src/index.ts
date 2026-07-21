@@ -1,6 +1,9 @@
 // Actor context builders
 export { SOLO_ACTOR, mcpActor, aiPmActor, remoteMcpActor } from "./actor";
 
+// P08B: session token sign/verify (stateless HMAC cookie).
+export { signSession, verifySession, type SessionPayload } from "./auth/session";
+
 // Token encryption (P07D) — AES-256-GCM for provider tokens in config_json.
 export {
   encryptSecret,
@@ -82,6 +85,9 @@ export {
 
 // Services
 export {
+  authService,
+  type AuthService,
+  requireUser,
   sequenceService,
   type SequenceService,
   workspaceService,

@@ -1,17 +1,7 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/app-shell";
 import { ThemeProvider } from "@/lib/theme-provider";
 import "@/styles/globals.css";
-
-// StateHub has no truly static pages — every route reads from D1 via
-// AppShell (workspace switcher) at minimum. Force dynamic rendering so
-// `getCloudflareContext()` (sync, request-scoped) is available
-// everywhere. Without this, Next.js tries to statically prerender
-// `/_not-found`, which evaluates AppShell, which calls db(), which
-// calls getCloudflareContext() — and sync mode is not allowed during
-// static prerender.
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "StateHub",
@@ -27,9 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider>
-          <AppShell>{children}</AppShell>
-        </ThemeProvider>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

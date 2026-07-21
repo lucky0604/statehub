@@ -8,5 +8,5 @@ main = "src/worker.ts"
 [[d1_databases]]
 binding = "statehub-local"
 database_name = "statehub-local"
-database_id = "local"
+database_id = "d59a8c27-ed73-40ad-9ff9-3e736398b909"
 migrations_dir = "migrations"

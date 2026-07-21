@@ -6,6 +6,7 @@
  */
 import { ok, err, type ErrorCode } from "@statehub/shared";
 import { DomainError, ValidationError, NotFoundError } from "@statehub/domain";
+import { actorFromRequest, runWithActor } from "@/lib/server";
 
 export type Params = Record<string, string | string[]>;
 
@@ -52,7 +53,8 @@ export function withEnvelope<T>(handler: Handler<T>) {
   return async (req: Request, ctx: { params: Promise<Params> }): Promise<Response> => {
     try {
       const params = ctx.params ? await ctx.params : {};
-      const data = await handler(req, params);
+      const actor = actorFromRequest(req);
+      const data = await runWithActor(actor, () => handler(req, params));
       return Response.json(ok(data));
     } catch (e) {
       if (e instanceof DomainError) {
